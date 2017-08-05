@@ -1,3 +1,4 @@
 .ptp-sync/
 .settings/
 Debug/
+.DS_Store
