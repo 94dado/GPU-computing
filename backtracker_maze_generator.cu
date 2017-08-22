@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
-#include "common.h"
+#include "./Header/common.h"
 
 
 /*  Carve the maze starting at x, y. */

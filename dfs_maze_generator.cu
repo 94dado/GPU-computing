@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include "common.h"
+#include <cuda_runtime.h>
+#include "./Header/common.h"
 
 void init(Node *nodes, int width, int height) {
 	int i, j;

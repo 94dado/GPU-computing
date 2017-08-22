@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
-#include "common.h"
+#include "./Header/common.h"
 
 void CPU_wall_follower_maze_solver(int *maze, int length, int row_length){
 	//directions

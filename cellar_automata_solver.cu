@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
-#include "common.h"
+#include "./Header/common.h"
 
 int check_neighbour_open(int *maze, int length, int row_length, int pos, int neighbour){
 	if(neighbour >= 0 && neighbour < length){

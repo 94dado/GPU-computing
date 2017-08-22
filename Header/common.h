@@ -1,6 +1,6 @@
 #include <stdlib.h>
-#include <cuda_runtime.h>
 #include <stdio.h>
+#include "node.h"
 
 #define WALL 0
 #define OPEN 1
@@ -9,17 +9,6 @@
 #define bool int
 #define true 1
 #define false 0
-
-typedef struct node {
-    //Node position - little waste of memory, but it allows faster generation
-    int x, y;
-    //Pointer to parent node
-    void *parent;
-    //Character to be displayed
-    bool isSpace;
-    //Directions that still haven't been explored
-	char dirs;
-} Node;
 
 // fill all with wall
 void fill_of_wall(int *array, int dimension){
