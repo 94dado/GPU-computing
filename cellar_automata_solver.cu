@@ -15,7 +15,7 @@ int check_neighbour_open(int *maze, int length, int row_length, int pos, int nei
 	return 0;
 }
 
-void CPU_perfect_maze_solver(int *maze, int length, int row_length){
+void CPU_cellular_automata_solver(int *maze, int length, int row_length){
 	bool again = true;
 	int i;
 	while(again){
@@ -62,7 +62,20 @@ __global__ void GPU_check_neighbour_open(int *maze, int length, int row_length, 
 
 }
 
-void GPU_perfect_maze_solver(){
+void GPU_cellular_automata_solver(int *maze, int length, int row_length){
 	bool again = true;
-	//da finire
+	int *dev_maze;
+	bool *dev_again;
+	//copio su device
+	cudaMemcpy(dev_maze,maze,sizeof(int)*length,cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_again, &again, sizeof(bool), cudaMemcpyHostToDevice);
+	while(again){
+		//itero esecuzione
+		GPU_check_neighbour_open<<<length/row_length, row_length>>>(dev_maze, length, row_length, dev_again);
+		//copio su host
+		cudaMemcpy(&again, dev_again, sizeof(bool), cudaMemcpyDeviceToHost);
+	}
+	//terminata esecuzione su gpu. copio risultato
+	cudaMemcpy(maze, dev_maze, sizeof(int) * length, cudaMemcpyDeviceToHost);
+
 }
