@@ -1,3 +1,6 @@
+#ifndef _node_
+#define _node_ 1
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -11,3 +14,5 @@ typedef struct node {
     //Directions that still haven't been explored
 	char dirs;
 } Node;
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef _common_
+#define _common_ 1
+
 #include <stdlib.h>
 #include <stdio.h>
 #include "node.h"
@@ -39,3 +42,5 @@ void from_node_to_grid(Node *nodes, int *grid, int width, int height) {
 		}
     }
 }
+
+#endif
