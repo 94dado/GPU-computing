@@ -135,11 +135,15 @@ void initializeMaze(int *maze_size){
 }
 
 int *DFSToCoord(int *coordMaze){
-	int i = 0;
-    for(unsigned int a = 0; a < maze.size(); a++){
-        for(unsigned int b = 0; b < maze[a].size(); b++){
-            coordMaze[i] = maze[a][b][0];
-			i++;
+    int width = maze.size();
+    for(int a = 0; a < width; a++){
+        for(int b = 0; b < maze[a].size(); b++){
+            if (a == 0 && maze[a][b][0] == 0 || a == width-1 && maze[a][b][0] == 0 || b == 0 && maze[a][b][0] == 0 || a == maze[a].size()-1 && maze[a][b][0] == 0) {
+                coordMaze[a*width + b] = 2;
+            }
+            else {
+                coordMaze[a*width + b] = maze[a][b][0];
+            }
         }
 	}
 	return coordMaze;
