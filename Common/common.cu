@@ -21,3 +21,9 @@ void PrintMaze(int *array, int width, int height){
 	cout << endl;
 }
 
+__global__ void GPU_FillWall(int *array, int width, int dimension){
+	int index = width * blockIdx.x + threadIdx.x;
+	if(index < dimension){
+		array[index] = WALL;
+	}
+}

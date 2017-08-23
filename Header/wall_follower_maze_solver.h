@@ -3,4 +3,6 @@
 
 void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int height);
 
+void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int height);
+
 #endif
