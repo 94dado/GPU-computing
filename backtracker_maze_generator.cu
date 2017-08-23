@@ -68,7 +68,7 @@ __global__ void GPU_init_maze(int *maze, int length, int row_length){
 	maze[idx] = WALL;
 }
 
-__global__ void GPU_carve_maze(int *maze,int width, int height){
+__global__ void GPU_carve_maze(int *maze,int width, int height, int rand1, int rand2){
 	 int y = threadIdx.x + blockDim.x * blockIdx.x;
 	 int x= threadIdx.y + blockDim.y * blockIdx.y;
 
@@ -76,8 +76,8 @@ __global__ void GPU_carve_maze(int *maze,int width, int height){
 	    int x2, y2;
 	    int dx, dy;
 	    int dir, count;
-	    //su gpu non esiste rand, porca eva, al suo posto uso x
-	    dir = x % 4;
+
+	    dir = rand1;
 	    count = 0;
 	    while(count < 4) {
 	       dx = 0; dy = 0;
@@ -96,8 +96,8 @@ __global__ void GPU_carve_maze(int *maze,int width, int height){
 	          maze[y1 * width + x1] = OPEN;
 	          maze[y2 * width + x2] = OPEN;
 	          x = x2; y = y2;
-	          //stesso problema di sopra, uso y al posto di rand()
-	          dir = y % 4;
+
+	          dir = rand2;
 	          count = 0;
 	       } else {
 	          dir = (dir + 1) % 4;
@@ -109,6 +109,9 @@ __global__ void GPU_carve_maze(int *maze,int width, int height){
 void GPU_backtracker_maze_generator(int *maze, int width, int height){
 	int *dev_maze;
 	int length = width * height;
+	srand(time(NULL));
+	int rand1 = rand() % 4;
+	int rand2 = rand() % 4;
 	//initialize the maze
 	cudaMemcpy(dev_maze, maze, sizeof(int) * length, cudaMemcpyHostToDevice);
 	GPU_init_maze<<<height, width>>>(dev_maze, width* height, width);
@@ -118,7 +121,7 @@ void GPU_backtracker_maze_generator(int *maze, int width, int height){
 	maze[1 * width + 1] = OPEN;
 	//carve the maze
 	cudaMemcpy(dev_maze, maze, sizeof(int) * length, cudaMemcpyHostToDevice);
-	GPU_carve_maze<<<height, width>>>(dev_maze, width, height);
+	GPU_carve_maze<<<height, width>>>(dev_maze, width, height, rand1, rand2);
 	cudaDeviceSynchronize();
 	cudaMemcpy(maze,dev_maze, sizeof(int) * length, cudaMemcpyDeviceToHost);
 	/* Set up the entry and exit. */
@@ -126,25 +129,6 @@ void GPU_backtracker_maze_generator(int *maze, int width, int height){
 	maze[(height - 1) * width + (width - 2)] = OPEN;
 	//dovrebbe aver finito
 }
-
-//int main(){
-//	//generate
-//	int maze[100];
-//	printf("maze cpu\n");
-//	CPU_backtracker_maze_generator(maze,10,10);
-//	print_maze(maze,10,10);
-//	printf("solve cpu\n\n");
-//	CPU_cellular_automata_solver(maze, 100, 10);
-//	print_maze(maze,10,10);
-//	printf("maze gpu\n\n");
-//	GPU_backtracker_maze_generator(maze,10,10);
-//	print_maze(maze,10,10);
-//	printf("solve gpu\n\n");
-//	GPU_cellular_automata_solver(maze, 100, 10);
-//
-//
-//	return 0;
-//}
 
 
 /* Solve the maze.

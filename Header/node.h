@@ -1,9 +1,6 @@
 #ifndef _node_
 #define _node_ 1
 
-#include <stdlib.h>
-#include <stdio.h>
-
 typedef struct node {
     //Node position - little waste of memory, but it allows faster generation
     int x, y;

@@ -9,8 +9,11 @@ int check_neighbour_open(int *maze, int length, int row_length, int pos, int nei
 			return 0;
 		if(pos % row_length == 0 && neighbour == pos - 1)
 			return 0;
-
-		return maze[pos] == OPEN? 1 : 0;
+		if(maze[neighbour] == OPEN || maze[neighbour] == OBJECTIVE){
+			return 1;
+		}else{
+			return 0;
+		}
 	}
 	return 0;
 }
@@ -22,7 +25,11 @@ __device__ int DEVICE_check_neighbour_open(int *maze, int length, int row_length
 		if(pos % row_length == 0 && neighbour == pos - 1)
 			return 0;
 
-		return maze[pos] == OPEN? 1 : 0;
+		if(maze[neighbour] == OPEN || maze[neighbour] == OBJECTIVE){
+			return 1;
+		}else{
+			return 0;
+		}
 	}
 	return 0;
 }
@@ -56,21 +63,22 @@ void CPU_cellular_automata_solver(int *maze, int length, int row_length){
 		again = false;
 		//per ogni cella
 		for(i=0; i < length; i++){
-			//controllo le celle vicine
-			int count = 0;
-			//su
-			count += check_neighbour_open(maze, length, row_length, i, i - row_length);
-			//giu
-			count += check_neighbour_open(maze, length, row_length, i, i + row_length);
-			//dx
-			count += check_neighbour_open(maze, length, row_length, i, i + 1);
-			//sx
-			count += check_neighbour_open(maze, length, row_length, i, i - 1);
-			//se ho solo 1 vicino open
-			if(count == 1){
-				printf("change\n");
-				maze[i] = WALL;
-				again = true;
+			if(maze[i] != WALL){
+				//controllo le celle vicine
+				int count = 0;
+				//su
+				count += check_neighbour_open(maze, length, row_length, i, i - row_length);
+				//giu
+				count += check_neighbour_open(maze, length, row_length, i, i + row_length);
+				//dx
+				count += check_neighbour_open(maze, length, row_length, i, i + 1);
+				//sx
+				count += check_neighbour_open(maze, length, row_length, i, i - 1);
+				//se ho solo 1 vicino open
+				if(count == 1){
+					maze[i] = WALL;
+					again = true;
+				}
 			}
 		}
 	}
