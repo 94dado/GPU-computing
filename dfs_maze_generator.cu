@@ -189,7 +189,7 @@ void randomPoint(int *maze_size, bool part){
 }
 
 // maze[(width-1) * (height-1)], coord must be initialize like this
-void DFSMazeGenerator(int *coordMaze, int width, int height){
+void CPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	srand(time(NULL));
 
 	width--;
