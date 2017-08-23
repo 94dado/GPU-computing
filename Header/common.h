@@ -4,6 +4,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "node.h"
+#include "vector.h"
+
+#define WALL 0
+#define OPEN 1
+#define OBJECTIVE 2
+
+#define bool int
+#define true 1
+#define false 0
+
+#include "union.h"
 
 #define WALL 0
 #define OPEN 1
@@ -41,6 +52,22 @@ void from_node_to_grid(Node *nodes, int *grid, int width, int height) {
 			grid[width * i + j] = nodes[width * i + j].isSpace;
 		}
     }
+}
+
+// SORT
+void bubble_sort(Vector *vector) {
+	int x, y;
+	int tot = vector_count(vector);
+
+	for (x = 0 ; x < (tot - 1); x++) {
+		for (y = 0 ; y < tot - x - 1; y++) {
+			if (vector->data[y] > vector->data[y+1]) {
+				IntPair *swap = vector->data[y];
+				vector->data[y] = vector->data[y + 1];
+				vector->data[y + 1] = swap;
+			}
+		}
+	}
 }
 
 #endif
