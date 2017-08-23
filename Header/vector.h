@@ -19,6 +19,7 @@ typedef struct vector {
 } Vector;
 
 void vector_init(Vector *v) {
+	v->data = NULL;
     v->size = 0;
     v->count = 0;
 }

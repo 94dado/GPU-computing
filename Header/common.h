@@ -16,14 +16,6 @@
 
 #include "union.h"
 
-#define WALL 0
-#define OPEN 1
-#define OBJECTIVE 2
-
-#define bool int
-#define true 1
-#define false 0
-
 // fill all with wall
 void fill_of_wall(int *array, int dimension){
 	int i;

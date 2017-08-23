@@ -152,19 +152,19 @@ void Draw(Vector *painted_points) {
 }
 
 int main(int argc, char **argv) {
-    Vector *all_edges;
-    vector_init(all_edges);
-    Vector *mst_edges;
-    vector_init(mst_edges);
-    Vector *points;
-    vector_init(points);
+    Vector all_edges;
+    vector_init(&all_edges);
+    Vector mst_edges;
+    vector_init(&mst_edges);
+    Vector points;
+    vector_init(&points);
 
     srand(time(0));
 
-    CreateEdges(all_edges);
-    shuffle_vector(all_edges);
-    Kruskal(all_edges, mst_edges);
-    ConvertToPaintedPoint(mst_edges, points);
-    Draw(points);
+    CreateEdges(&all_edges);
+    shuffle_vector(&all_edges);
+    Kruskal(&all_edges, &mst_edges);
+    ConvertToPaintedPoint(&mst_edges, &points);
+    Draw(&points);
     return 0;
 }

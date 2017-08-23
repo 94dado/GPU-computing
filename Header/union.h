@@ -13,6 +13,7 @@ typedef struct vectorInt {
 } VectorInt;
 
 void vectorInt_init(VectorInt *v) {
+	v->data = NULL;
     v->size = 0;
     v->count = 0;
 }
