@@ -108,39 +108,39 @@ void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int
 		//save the solution in the maze
 		update_maze_with_solution(maze, width, height, start, end, moves, count_moves);
 	}
-	else printf("solution not found \n");
+	else cout << "solution not found" << endl;;
 }
 
 __global__ void GPU_array_contains(int *maze, int move, int size, bool *result){
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
+//	printf("-----------\nindex: %d\nmaze[index]: %d\nmove: %d\n",index, maze[index], move);
 	if(index < size){
 		if(maze[index] == move){
+//			printf("set true alreadyInside\n");
 			*result = true;
 		}
 	}
 }
 
 __global__ void GPU_fill_solution(int *maze, int *solution, int solution_size){
-	int index = blockDim.x * blockIdx.x + threadIdx.x;
+	int index = threadIdx.x;
 	if(index < solution_size){
-		maze[index] = OPEN;
+		maze[solution[index]] = OPEN;
 	}
 }
 
 void GPU_update_maze_with_solution(int *maze, int *dev_maze, int width, int height, int start, int end, int *solution, int solution_size){
 	//set all to 0
+	int *dev_solution;
 	GPU_FillWall<<<height, width>>>(dev_maze, width, width*height);
 	cudaDeviceSynchronize();
 	cudaMemcpy(maze, dev_maze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
-	cout << "maze dopo GPUFillWall" << endl;
-	PrintMaze(maze, width, height);
 	//set to OPEN only the correct path
-	GPU_fill_solution<<<1, solution_size>>>(dev_maze, solution, solution_size);
+	cudaMalloc(&dev_solution, sizeof(int) * solution_size);
+	cudaMemcpy(dev_solution, solution, sizeof(int) * solution_size, cudaMemcpyHostToDevice);
+	GPU_fill_solution<<<1, solution_size>>>(dev_maze, dev_solution, solution_size);
 	cudaDeviceSynchronize();
-	cudaDeviceReset();
 	cudaMemcpy(maze, dev_maze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
-	cout << "maze dopo GPU_fill_solution" <<  endl;
-	PrintMaze(maze, width, height);
 	//set to OBJECTIVE the start and end
 	maze[start] = OBJECTIVE;
 	maze[end] = OBJECTIVE;
@@ -158,37 +158,40 @@ void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int
 		int maxMoves = (width*height) + 2;
 		//list of cells visited
 		int moves[maxMoves];
+		int *dev_moves;
+		cudaMalloc(&dev_moves, sizeof(int) * maxMoves);
 		//I have found the exit?
 		bool done = false;
 		moves[count_moves++] = start;
 		while (!done && count_moves < maxMoves){
-	//		cout << "---------------" << endl;
-	//		cout << "moves: ";
-	//		PrintMaze(moves, count_moves, 1);
+//			cout << "---------------" << endl;
+//			cout << "moves: ";
+//			PrintMaze(moves, count_moves, 1);
 			int move;
 			for(int i = 0; i < directions_length; i++){
 				move = turn(moves[count_moves-1], i);
 				//check if the current move is valid
 				if(is_valid_turn(maze, moves[count_moves -1], move, width, width* height)){
-	//				cout << "found movement!!" << endl;
-	//				cout << "move: " << move << endl;
+//					cout << "found movement!!" << endl;
+//					cout << "move: " << move << endl;
 					//save the movement. If i'm going back, I don't have to save this position, but to delete the last
 					bool alreadyInside = false;
 					bool *dev_alreadyInside;
 					cudaMalloc(&dev_alreadyInside, sizeof(bool));
 					cudaMemcpy(dev_alreadyInside, &alreadyInside, sizeof(bool), cudaMemcpyHostToDevice);
-					GPU_array_contains<<<height, width>>>(dev_maze, move, width*height, dev_alreadyInside);
+					cudaMemcpy(dev_moves, moves, sizeof(int) * count_moves, cudaMemcpyHostToDevice);
+					GPU_array_contains<<<1, count_moves>>>(dev_moves, move, count_moves, dev_alreadyInside);
 					cudaDeviceSynchronize();
 					cudaMemcpy(&alreadyInside, dev_alreadyInside, sizeof(bool), cudaMemcpyDeviceToHost);
 					if(alreadyInside){
-	//					cout << "i have to get back" << endl;
+//						cout << "i have to get back" << endl;
 						count_moves--;
 					}else{
-	//					cout << "go ahead!" << endl;
+//						cout << "go ahead!" << endl;
 						moves[count_moves++] = move;
 					}
 					if(moves[count_moves-1] == end){
-	//					cout << "reached the end" << endl;
+//						cout << "reached the end" << endl;
 						//finish!!!!
 						done = true;
 					}
@@ -199,6 +202,7 @@ void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int
 		//check if I have found a solution or not
 			if(done){
 				//save the solution in the maze
+//				cout << "start to update the maze with the solution" << endl;
 				GPU_update_maze_with_solution(maze,dev_maze, width, height, start, end, moves, count_moves);
 			}
 			else printf("solution not found \n");

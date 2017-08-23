@@ -18,9 +18,12 @@ int main(){
     //solve
     maze[0] = OBJECTIVE;
     maze[DIM-1] = OBJECTIVE;
+
     PrintMaze(maze,SIDE,SIDE);
-    GPU_wall_follower_maze_solver(maze,0, DIM-1,SIDE,SIDE);
+    GPU_wall_follower_maze_solver(maze, 0, DIM-1, SIDE, SIDE);
+
     cout << "soluzione" << endl;
     PrintMaze(maze,SIDE,SIDE);
 	return 0;
 }
+
