@@ -138,8 +138,8 @@ int *DFSToCoord(int *coordMaze){
     int width = maze.size();
     for(int a = 0; a < width; a++){
         for(int b = 0; b < maze[a].size(); b++){
-            if (a == 0 && maze[a][b][0] == 0 || a == width-1 && maze[a][b][0] == 0 || b == 0 && maze[a][b][0] == 0 || a == maze[a].size()-1 && maze[a][b][0] == 0) {
-                coordMaze[a*width + b] = 2;
+            if ((a == 0 && maze[a][b][0] == 0) || (a == width-1 && maze[a][b][0] == 0) || (b == 0 && maze[a][b][0] == 0) || (b == maze[a].size()-1 && maze[a][b][0] == 0)) {
+                coordMaze[a*width + b] = OBJECTIVE;
             }
             else {
                 coordMaze[a*width + b] = maze[a][b][0];
