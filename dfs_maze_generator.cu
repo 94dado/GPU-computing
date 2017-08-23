@@ -142,7 +142,12 @@ int *DFSToCoord(int *coordMaze){
                 coordMaze[a*width + b] = OBJECTIVE;
             }
             else {
-                coordMaze[a*width + b] = maze[a][b][0];
+                if (maze[a][b][0]) {
+                    coordMaze[a*width + b] = WALL;
+                }
+                else {
+                    coordMaze[a*width + b] = OPEN;
+                }
             }
         }
 	}
