@@ -1,147 +1,219 @@
-#include <cuda_runtime.h>
 #include <iostream>
-#include "./Header/common.h"
+#include <vector>
+
+#define UP    0
+#define DOWN  1
+#define LEFT  2
+#define RIGHT 3
 
 using namespace std;
 
-void init(Node *nodes, int width, int height) {
-	int i, j;
-	struct Node *n;
+int start_axis;
+int start_side;
 
-	//Setup crucial nodes
-	for (i = 0; i < width; i++) {
-		for (j = 0; j < height; j++) {
-			n = nodes + i + j * width;
-			if (i * j % 2) {
-				n->x = i;
-                n->y = j;
-                //Assume that all directions can be explored (4 youngest bits set)
-				n->dirs = 15;
-				n->isSpace = OPEN;
-            }
-            //Add walls between nodes
-			else {
-                n->isSpace = WALL;
-            }
+vector< vector< int > > dfs_path;
+
+/*
+ * Structure of the maze vector:
+ *                     |--> Filled in?
+ *   Row --> Column --|
+ *                     |--> Has been visited?
+ */
+vector< vector< vector< bool > > > maze;
+
+// Select a random direction based on our options, append it to the current path, and move there
+bool randomMove(int *maze_size, bool first_move){
+    int random_neighbor;
+    vector< vector< int > > unvisited_neighbors;
+
+    for(int direction = 0; direction < 4; direction++){
+        int possible_pmd[2] = {0, 0};
+
+        if(direction == UP){
+            possible_pmd[1] = -1;
 		}
-	}
-}
+		else if(direction == DOWN){
+            possible_pmd[1] = 1;
+		}
+		else if(direction == LEFT){
+            possible_pmd[0] = -1;
+		}
+		else {
+            possible_pmd[0] = 1;
+        }
 
-Node *link(Node *n, Node *nodes, int width, int height) {
-	//Connects node to random neighbor (if possible) and returns
-	//address of next node that should be visited
+        if(dfs_path.back()[0] + possible_pmd[0] * 2 > 0 &&
+           dfs_path.back()[0] + possible_pmd[0] * 2 < maze_size[0] - 1 &&
+           dfs_path.back()[1] + possible_pmd[1] * 2 > 0 &&
+           dfs_path.back()[1] + possible_pmd[1] * 2 < maze_size[1] - 1){
+            if(!maze[dfs_path.back()[1] + possible_pmd[1] * 2][dfs_path.back()[0] + possible_pmd[0] * 2][1]){
+                vector< int > possible_move_delta = {possible_pmd[0], possible_pmd[1]};
 
-	int x, y;
-	char dir;
-	struct Node *dest;
-
-	//Nothing can be done if null pointer is given - return
-	if (n == NULL) {
-        return NULL;
+                unvisited_neighbors.push_back(possible_move_delta);
+            }
+        }
     }
 
-	//While there are directions still unexplored
-	while (n->dirs) {
-		//Randomly pick one direction
-		dir = (1 << (rand() % 4));
+    if(unvisited_neighbors.size() > 0){
+        random_neighbor = rand() % unvisited_neighbors.size();
 
-		//If it has already been explored - try again
-		if (~n->dirs & dir) continue;
+        for(int a = 0; a < !first_move + 1; a++){
+            vector< int > new_location;
 
-		//Mark direction as explored
-		n->dirs &= ~dir;
+            new_location.push_back(dfs_path.back()[0] + unvisited_neighbors[random_neighbor][0]);
+            new_location.push_back(dfs_path.back()[1] + unvisited_neighbors[random_neighbor][1]);
 
-		//Depending on chosen direction
-		switch (dir) {
-			//Check if it's possible to go right
-			case 1:
-				if (n->x + 2 < width) {
-					x = n->x + 2;
-					y = n->y;
-				}
-				else continue;
-				break;
+            dfs_path.push_back(new_location);
 
-			//Check if it's possible to go down
-			case 2:
-				if (n->y + 2 < height) {
-					x = n->x;
-					y = n->y + 2;
-				}
-				else continue;
-				break;
+            maze[dfs_path.back()[1]][dfs_path.back()[0]][0] = false;
+            maze[dfs_path.back()[1]][dfs_path.back()[0]][1] = true;
+        }
 
-			//Check if it's possible to go left
-			case 4:
-				if (n->x - 2 >= 0) {
-					x = n->x - 2;
-					y = n->y;
-				}
-				else continue;
-				break;
+        return true;
+    } else {
+        return false;
+    }
+}
 
-			//Check if it's possible to go up
-			case 8:
-				if (n->y - 2 >= 0) {
-					x = n->x;
-					y = n->y - 2;
-				}
-				else continue;
-				break;
-		}
+// The fun part ;)
+void generateMaze(int *maze_size){
+    bool first_move = true;
+    bool success = true;
 
-		//Get destination node into pointer (makes things a tiny bit faster)
-		dest = nodes + x + y * width;
+    while((int) dfs_path.size() > 1 - first_move){
+        if(!success){
+            dfs_path.pop_back();
 
-		//Make sure that destination node is not a wall
-		if (dest->isSpace == OPEN) {
-			//If destination is a linked node already - abort
-			if (dest->parent != NULL) continue;
+            if(!first_move && dfs_path.size() > 2){
+                dfs_path.pop_back();
+			}
+			else {
+                break;
+            }
 
-			//Otherwise, adopt node
-			dest->parent = n;
+            success = true;
+        }
 
-			//Remove wall between nodes
-			nodes[n->x + (x - n->x) / 2 + (n->y + (y - n->y) / 2) * width].isSpace = OPEN;
+        while(success){
+            success = randomMove(maze_size, first_move);
 
-			//Return address of the child node
-			return dest;
-		}
+            if(first_move){
+                first_move = false;
+            }
+        }
+    }
+}
+
+// Initialize the maze vector with a completely-filled grid with the size the user specified
+void initializeMaze(int *maze_size){
+    for(int a = 0; a < maze_size[1]; a++){
+        for(int b = 0; b < maze_size[0]; b++){
+            bool is_border;
+
+            if(a == 0 || a == maze_size[1] - 1 ||
+               b == 0 || b == maze_size[0] - 1){
+                is_border = true;
+			}
+			else {
+                is_border = false;
+            }
+
+            vector< bool > new_cell = {true, is_border};
+
+            if((unsigned int) a + 1 > maze.size()){
+                vector< vector< bool > > new_row = {new_cell};
+
+                maze.push_back(new_row);
+			}
+			else {
+                maze[a].push_back(new_cell);
+            }
+        }
+    }
+}
+
+int *DFSToCoord(int *coordMaze){
+	int i = 0;
+    for(unsigned int a = 0; a < maze.size(); a++){
+        for(unsigned int b = 0; b < maze[a].size(); b++){
+            coordMaze[i] = maze[a][b][0];
+			i++;
+        }
 	}
-
-	//If nothing more can be done here - return parent's address
-	return n->parent;
+	return coordMaze;
 }
 
-// dimensions must be odd and greater than 0
-void dfs_maze_generator (int *maze, int width, int height) {
-    // Nodes array
-    struct Node nodes[width * height];
-    int i, badarg;
-	long seed;
-	struct Node *start, *last;
+// Set a random point (start or end)
+void randomPoint(int *maze_size, bool part){
+    int axis;
+    int side;
 
-	//Initialize maze
-	init(nodes, width, height);
+    if(!part){
+        axis = rand() % 2;
+        side = rand() % 2;
 
-	//Setup start node
-	start = nodes + 1 + width;
-	start->parent = start;
-	last = start;
+        start_axis = axis;
+        start_side = side;
+	}
+	else {
+        bool done = false;
 
-	//Connect nodes until start node is reached and can't be left
-    while ((last = link(last, nodes, width, height)) != start);
+        while(!done){
+            axis = rand() % 2;
+            side = rand() % 2;
 
-    // move to grid from node
-    FromNodeToGrid(nodes, maze, width, height);
+            if(axis != start_axis ||
+               side != start_side){
+                done = true;
+            }
+        }
+    }
 
-    // print grid on terminal
-    PrintMaze(maze, width, height);
+    vector< int > location = {0, 0};
+
+    if(!side){
+        location[!axis] = 0;
+	}
+	else {
+        location[!axis] = maze_size[!axis] - 1;
+    }
+
+    location[axis] = 2 * (rand() % ((maze_size[axis] + 1) / 2 - 2)) + 1;
+
+    if(!part){
+        dfs_path.push_back(location);
+    }
+
+    maze[location[1]][location[0]][0] = false;
+    maze[location[1]][location[0]][1] = true;
 }
 
-int main(int argc, char **argv) {
-    int width = 99;
-    int height = 99;
-    int maze [width * height];
-    dfs_maze_generator(maze, width, height);
+// maze[(width-1) * (height-1)], coord must be initialize like this
+void DFSMazeGenerator(int *coordMaze, int width, int height){
+	srand(time(NULL));
+
+	width--;
+	height--;
+
+	int maze_size[2] = {width, height};
+
+    // The width and height must be greater than or equal to 5 or it won't work
+    // The width and height must be odd or else we will have extra walls
+    for(int a = 0; a < 2; a++){
+        if(maze_size[a] < 5){
+            maze_size[a] = 5;
+		}
+		else if(maze_size[a] % 2 == 0){
+            maze_size[a]--;
+        }
+    }
+
+    initializeMaze(maze_size);
+    randomPoint(maze_size, false);
+    randomPoint(maze_size, true);
+    generateMaze(maze_size);
+
+    DFSToCoord(coordMaze);
+
+    PrintMaze(coordMaze, width, height);
 }
