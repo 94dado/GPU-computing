@@ -4,7 +4,7 @@
 
 using namespace std;
 
-void init(Node *nodes, int width, int height) {
+void init(struct Node *nodes, int width, int height) {
 	int i, j;
 	struct Node *n;
 
@@ -27,7 +27,7 @@ void init(Node *nodes, int width, int height) {
 	}
 }
 
-Node *link(Node *n, Node *nodes, int width, int height) {
+struct Node *link(struct Node *n, struct Node *nodes, int width, int height) {
 	//Connects node to random neighbor (if possible) and returns
 	//address of next node that should be visited
 
@@ -114,7 +114,7 @@ Node *link(Node *n, Node *nodes, int width, int height) {
 }
 
 // dimensions must be odd and greater than 0
-void dfs_maze_generator (int *maze, int width, int height) {
+void CPU_dfs_maze_generator (int *maze, int width, int height) {
     // Nodes array
     struct Node nodes[width * height];
     int i, badarg;
@@ -134,14 +134,4 @@ void dfs_maze_generator (int *maze, int width, int height) {
 
     // move to grid from node
     FromNodeToGrid(nodes, maze, width, height);
-
-    // print grid on terminal
-    PrintMaze(maze, width, height);
-}
-
-int main(int argc, char **argv) {
-    int width = 99;
-    int height = 99;
-    int maze [width * height];
-    dfs_maze_generator(maze, width, height);
 }
