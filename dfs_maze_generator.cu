@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <cuda_runtime.h>
+#include "Header/common.h"
 
 #define UP    0
 #define DOWN  1
@@ -214,6 +216,4 @@ void CPU_dfs_maze_generator(int *coordMaze, int width, int height){
     generateMaze(maze_size);
 
     DFSToCoord(coordMaze);
-
-    PrintMaze(coordMaze, width, height);
 }

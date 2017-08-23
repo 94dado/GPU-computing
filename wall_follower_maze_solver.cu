@@ -3,6 +3,8 @@
 #include <cuda_runtime.h>
 #include "./Header/common.h"
 
+
+#include <unistd.h>
 using namespace std;
 
 #define RIGHT 0
@@ -74,18 +76,26 @@ void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int
 	bool done = false;
 	moves[count_moves++] = start;
 	while (!done && count_moves < maxMoves){
+//		cout << "---------------" << endl;
+//		cout << "moves: ";
+		PrintMaze(moves, count_moves, 1);
 		int move;
 		for(int i = 0; i < directions_length; i++){
 			move = turn(moves[count_moves-1], i);
 			//check if the current move is valid
 			if(is_valid_turn(maze, moves[count_moves -1], move, width, width* height)){
+//				cout << "found movement!!" << endl;
+//				cout << "move: " << move << endl;
 				//save the movement. If i'm going back, I don't have to save this position, but to delete the last
 				if(array_contains(maze, move, count_moves)){
+//					cout << "i have to get back" << endl;
 					count_moves--;
 				}else{
+//					cout << "go ahead!" << endl;
 					moves[count_moves++] = move;
 				}
 				if(moves[count_moves-1] == end){
+//					cout << "reached the end" << endl;
 					//finish!!!!
 					done = true;
 				}

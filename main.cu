@@ -13,13 +13,13 @@
 int main(){
 	//generate
 	int maze[DIM];
-    CPU_backtracker_maze_generator(maze, SIDE, SIDE);
+    CPU_dfs_maze_generator(maze, SIDE + 1, SIDE + 1);
 
     //create start and end
-    int start = 0;
-    int end = DIM - 1;
-    maze[start] = OBJECTIVE;
-    maze[end] = OBJECTIVE;
+//    int start = 0;
+//    int end = DIM - 1;
+//    maze[start] = OBJECTIVE;
+//    maze[end] = OBJECTIVE;
 
     PrintMaze(maze,SIDE,SIDE);
     //solve the maze
