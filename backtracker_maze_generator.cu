@@ -69,42 +69,42 @@ __global__ void GPU_init_maze(int *maze, int length, int row_length){
 }
 
 __global__ void GPU_carve_maze(int *maze,int width, int height, int rand1, int rand2){
-	 int y = threadIdx.x + blockDim.x * blockIdx.x;
-	 int x= threadIdx.y + blockDim.y * blockIdx.y;
+	 int y = blockIdx.x;
+	 int x = threadIdx.y;
+	 //only odd numbers
+	 if(x%2 != 1 && y%2 != 1) return;
 
 	 int x1, y1;
-	    int x2, y2;
-	    int dx, dy;
-	    int dir, count;
+	 int x2, y2;
+	 int dx, dy;
+	 int dir, count;
 
-	    dir = rand1;
-	    count = 0;
-	    while(count < 4) {
-	       dx = 0; dy = 0;
-	       switch(dir) {
-	       case 0:  dx = 1;  break;
-	       case 1:  dy = 1;  break;
-	       case 2:  dx = -1; break;
-	       default: dy = -1; break;
-	       }
-	       x1 = x + dx;
-	       y1 = y + dy;
-	       x2 = x1 + dx;
-	       y2 = y1 + dy;
-	       if(   x2 > 0 && x2 < width && y2 > 0 && y2 < height
-	          && maze[y1 * width + x1] == WALL && maze[y2 * width + x2] == WALL) {
-	          maze[y1 * width + x1] = OPEN;
-	          maze[y2 * width + x2] = OPEN;
-	          x = x2; y = y2;
-
-	          dir = rand2;
-	          count = 0;
-	       } else {
-	          dir = (dir + 1) % 4;
-	          count += 1;
-	       }
-	    }
-
+	 dir = rand1;
+	 count = 0;
+	 while(count < 4) {
+		 dx = 0; dy = 0;
+		 switch(dir) {
+		 	 case 0:  dx = 1;  break;
+		 	 case 1:  dy = 1;  break;
+		 	 case 2:  dx = -1; break;
+		 	 default: dy = -1; break;
+		 }
+		 x1 = x + dx;
+		 y1 = y + dy;
+		 x2 = x1 + dx;
+		 y2 = y1 + dy;
+		 if(x2 > 0 && x2 < width && y2 > 0 && y2 < height
+			&& maze[y1 * width + x1] == WALL && maze[y2 * width + x2] == WALL) {
+			 maze[y1 * width + x1] = OPEN;
+			 maze[y2 * width + x2] = OPEN;
+			 x = x2; y = y2;
+			 dir = rand2;
+			 count = 0;
+		 } else {
+			 dir = (dir + 1) % 4;
+			 count += 1;
+		 }
+	 }
 }
 void GPU_backtracker_maze_generator(int *maze, int width, int height){
 	int *dev_maze;
@@ -113,6 +113,7 @@ void GPU_backtracker_maze_generator(int *maze, int width, int height){
 	int rand1 = rand() % 4;
 	int rand2 = rand() % 4;
 	//initialize the maze
+	cudaMalloc(&dev_maze, sizeof(int) * length);
 	cudaMemcpy(dev_maze, maze, sizeof(int) * length, cudaMemcpyHostToDevice);
 	GPU_init_maze<<<height, width>>>(dev_maze, width* height, width);
 	cudaDeviceSynchronize();
