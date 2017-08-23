@@ -58,6 +58,8 @@ __device__ int DEVICE_check_neighbour_open(int *maze, int length, int row_length
 			}else{
 				return 0;
 			}
+		}else{
+			return 0;
 		}
 }
 
