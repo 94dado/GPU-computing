@@ -12,6 +12,9 @@ using namespace std;
 // fill all with wall
 void FillWall(int *array, int dimension);
 
+//fill all opened
+void FillOpen(int *array, int dimension);
+
 void PrintMaze(int *array, int width, int height);
 
 __global__ void GPU_FillWall(int *array, int width, int dimension);

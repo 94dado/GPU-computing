@@ -10,6 +10,14 @@ void FillWall(int *array, int dimension){
 	}
 }
 
+//fill all opened
+void FillOpen(int *array, int dimension){
+	int i;
+		for(i=0; i < dimension; i++){
+			array[i] = OPEN;
+		}
+}
+
 void PrintMaze(int *array, int width, int height){
 	int i,j;
 	for(i = 0; i < height; i++){

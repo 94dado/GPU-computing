@@ -9,37 +9,15 @@
 #include "Header/cellular_automata_solver.h"
 #include "Header/dfs_maze_generator.h"
 #include "Header/wall_follower_maze_solver.h"
+#include "Header/division_maze_generator.h"
 
-#define DIM 846400
-#define SIDE 920
+#define DIM 64
+#define SIDE 8
 
 int main(){
 	//generate
 	int maze[DIM];
-	int mazeGPU[DIM];
-    CPU_dfs_maze_generator(maze, SIDE + 1, SIDE + 1);
-    memcpy(mazeGPU,maze,DIM * sizeof(int));
-
-
-//    PrintMaze(maze,SIDE,SIDE);
-    int start, end;
-    FindStartEnd(maze, DIM, &start, &end);
-//    cout << "start: " << start << ", end: " << end << endl;
-    double startCPU, finishCPU, startGPU, finishGPU;
-    startCPU = seconds();
-    CPU_wall_follower_maze_solver(maze, start, end, SIDE, SIDE);
-    finishCPU = seconds();
-
-    startGPU = seconds();
-    GPU_wall_follower_maze_solver(mazeGPU, start, end, SIDE, SIDE);
-    finishGPU = seconds();
-
-//    cout << "soluzione CPU" << endl;
-//    PrintMaze(maze,SIDE,SIDE);
-//    cout << "soluzione GPU" << endl;
-//    PrintMaze(mazeGPU,SIDE,SIDE);
-
-    cout << "tempo CPU: " << finishCPU - startCPU << endl;
-    cout << "tempo GPU: " << finishGPU - startGPU << endl;
+	CPU_division_maze_generator(maze, SIDE, SIDE);
+	PrintMaze(maze,SIDE,SIDE);
 	return 0;
 }
