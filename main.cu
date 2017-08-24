@@ -19,8 +19,8 @@ int main(){
     PrintMaze(maze,SIDE,SIDE);
     int start, end;
     FindStartEnd(maze, DIM, &start, &end);
-    cout << "start: " << start << ", end: " << end << endl;
-    CPU_wall_follower_maze_solver(maze, start, end, SIDE, SIDE);
+//    cout << "start: " << start << ", end: " << end << endl;
+    GPU_wall_follower_maze_solver(maze, start, end, SIDE, SIDE);
 
     cout << "soluzione" << endl;
     PrintMaze(maze,SIDE,SIDE);
