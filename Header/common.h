@@ -2,6 +2,7 @@
 #define _common_ 1
 
 #include <iostream>
+#include <union.h>
 
 using namespace std;
 
