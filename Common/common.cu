@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 #include "../Header/common.h"
+
+using namespace std;
 
 // fill all with wall
 void FillWall(int *array, int dimension){

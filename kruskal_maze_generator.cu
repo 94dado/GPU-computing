@@ -1,9 +1,17 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <cuda_runtime.h>
-#include "./Header/common.h"
+#include "Header/common.h"
 
 using namespace std;
+
+// Shuffle a vector
+void ShuffleVector (std::vector< pair<int,int> > *vector) {
+	for (int i = 0; i < vector->size(); ++i) {
+		swap((*vector)[i], (*vector)[rand() % vector->size()]);
+	}
+}
 
 // We are going to represent the two-dimensinal array as a one-dimensional
 // vector. This will allow us to represent the edges in a shorter way.
@@ -196,5 +204,4 @@ void CPU_kruskal_maze_generator(int *maze, int width, int height) {
   int largeMaze[size * size];
   GenerateMaze(points, largeMaze, newWidth, newHeight, size);
   FromMazeToGrid(largeMaze, maze, width, size);
-  PrintMaze(maze, width, height);
 }

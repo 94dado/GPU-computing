@@ -1,8 +1,11 @@
 #include <stdlib.h>
+#include <iostream>
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include "time.h"
 #include "Header/common.h"
+
+using namespace std;
 
 #define HORIZONTAL 1
 #define VERTICAL 2

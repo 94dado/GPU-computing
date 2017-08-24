@@ -2,9 +2,7 @@
 #define _common_ 1
 
 #include <iostream>
-#include <union.h>
-
-using namespace std;
+#include "union.h"
 
 #define WALL 0
 #define OPEN 1
@@ -21,4 +19,5 @@ void PrintMaze(int *array, int width, int height);
 __global__ void GPU_FillWall(int *array, int width, int dimension);
 
 void FindStartEnd(int *maze, int length, int *start, int *end);
+
 #endif
