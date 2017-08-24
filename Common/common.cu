@@ -27,3 +27,19 @@ __global__ void GPU_FillWall(int *array, int width, int dimension){
 		array[index] = WALL;
 	}
 }
+
+void FindStartEnd(int *maze, int length, int *start, int *end){
+	int count = 0;
+	*start = *end = -1;
+	for(int i = 0; i < length; i++){
+		if(maze[i] == OBJECTIVE){
+			if(count == 0){
+				*start = i;
+				count++;
+			}else if (count == 1){
+				*end = i;
+				break;
+			}
+		}
+	}
+}

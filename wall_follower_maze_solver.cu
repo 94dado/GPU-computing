@@ -68,39 +68,71 @@ void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int
 	setupDirections(directions, width);
 	//counter of done moves
 	int count_moves = 0;
+	//counter of all cells visited
+	int count_already = 0;
 	//max possible moves
 	int maxMoves = (width*height) + 2;
-	//list of cells visited
+	//path that i'm following
 	int moves[maxMoves];
+	//all cell visited
+	int already_seen[width*height];
 	//I have found the exit?
 	bool done = false;
 	moves[count_moves++] = start;
+	already_seen[count_already++] = start;
 	while (!done && count_moves < maxMoves){
 //		cout << "---------------" << endl;
 //		cout << "moves: ";
 //		PrintMaze(moves, count_moves, 1);
 		int move;
+		int dests[directions_length];
 		for(int i = 0; i < directions_length; i++){
 			move = turn(moves[count_moves-1], i);
 			//check if the current move is valid
 			if(is_valid_turn(maze, moves[count_moves -1], move, width, width* height)){
-//				cout << "found movement!!" << endl;
+//				cout << "found possible movement!!" << endl;
 //				cout << "move: " << move << endl;
-				//save the movement. If i'm going back, I don't have to save this position, but to delete the last
-				if(array_contains(maze, move, count_moves)){
-//					cout << "i have to get back" << endl;
-					count_moves--;
-				}else{
-//					cout << "go ahead!" << endl;
-					moves[count_moves++] = move;
-				}
-				if(moves[count_moves-1] == end){
-//					cout << "reached the end" << endl;
-					//finish!!!!
-					done = true;
-				}
-				break;
+				dests[i] = move;
+			}else{
+				dests[i] = -1;
 			}
+		}
+		//all possible dests calculated. now choose where to go
+		bool backtrackAvailable = false;
+		bool chosen = false;
+		for(int i = 0; i < directions_length; i++){
+			if(dests[i] != -1){
+				//if is a valid destination
+				if(!array_contains(already_seen, dests[i], count_already)){
+					//new cell never visited before. It's ok for me
+					moves[count_moves++] = dests[i];
+					already_seen[count_already++] = dests[i];
+					chosen = true;
+					break;
+				}else{
+					//cell already visited. Is backtracking?
+					if(array_contains(moves, dests[i], count_moves)){
+						//i'm trying to backtrack. That's my last choice
+						backtrackAvailable = true;
+					}
+				}
+			}
+		}
+		if(!chosen && backtrackAvailable){
+			//i can only go back
+			count_moves--;
+//			cout << "backtrack: " << moves[count_moves-1] << endl;
+		}else if (chosen){
+//			cout << "move made: " << moves[count_moves-1] << endl;
+			if(moves[count_moves-1] == end){
+//				cout << "reached the end" << endl;
+				//finish!!!!
+				done = true;
+			}
+		}else{
+			//no moves available. I'm simply fucked
+//			cout << "no moves available. FUCK!" << endl;
+			return;
 		}
 	}
 	//check if I have found a solution or not
@@ -108,8 +140,12 @@ void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int
 		//save the solution in the maze
 		update_maze_with_solution(maze, width, height, start, end, moves, count_moves);
 	}
-	else cout << "solution not found" << endl;;
+	else{
+		//no solution
+		cout << "solution not found" << endl;
+	}
 }
+
 
 __global__ void GPU_array_contains(int *maze, int move, int size, bool *result){
 	int index = blockIdx.x * blockDim.x + threadIdx.x;

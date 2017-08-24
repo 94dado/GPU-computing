@@ -16,4 +16,5 @@ void PrintMaze(int *array, int width, int height);
 
 __global__ void GPU_FillWall(int *array, int width, int dimension);
 
+void FindStartEnd(int *maze, int length, int *start, int *end);
 #endif

@@ -13,17 +13,16 @@
 int main(){
 	//generate
 	int maze[DIM];
-    CPU_backtracker_maze_generator(maze, SIDE, SIDE);
+    CPU_dfs_maze_generator(maze, SIDE + 1, SIDE + 1);
 
     //solve
-    maze[0] = OBJECTIVE;
-    maze[DIM-1] = OBJECTIVE;
-
     PrintMaze(maze,SIDE,SIDE);
-    GPU_wall_follower_maze_solver(maze, 0, DIM-1, SIDE, SIDE);
+    int start, end;
+    FindStartEnd(maze, DIM, &start, &end);
+    cout << "start: " << start << ", end: " << end << endl;
+    CPU_wall_follower_maze_solver(maze, start, end, SIDE, SIDE);
 
     cout << "soluzione" << endl;
     PrintMaze(maze,SIDE,SIDE);
 	return 0;
 }
-
