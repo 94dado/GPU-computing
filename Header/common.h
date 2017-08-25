@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "union.h"
+#include "node.h"
 
 #define WALL 0
 #define OPEN 1
