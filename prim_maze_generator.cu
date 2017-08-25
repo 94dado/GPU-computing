@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "./Header/common.h"
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -15,14 +16,12 @@ vector<Edge> safe;
 // array with all nodes and edges of mst
 vector<Node> mst;
 
-int counter = 0;      // number of edges. if n-1 nodes -> end prim alg
-
 // initialize vectors
 void init(int width, int height) {
-    for (int i = 0; i < width; i++) {
-        nodes.push_back(vector<Node>(height));
+    for (int i = 0; i < height; i++) {
+        nodes.push_back(vector<Node>(width));
     }
-    for (int i = 0; i < (width * height) - 1; i++) {
+    for (int i = 0; i < width * height; i++) {
         father.push_back(Node());
     }
 }
@@ -68,7 +67,7 @@ void setup (int width, int height) {
 }
 
 void prim(int width, int height) {
-    for (int i = 0; i != (width * height) - 1; i++) {
+    for (int i = 0; i != width * height; i++) {
 
         Edge *min = new Edge();
 
@@ -104,7 +103,7 @@ void prim(int width, int height) {
          * all edges of the new node from the minimal edge are put into the safe list. light edges at front, heavy ones at end.
          */
         for (int i = 0; i < 4; i++) {
-            if (min->b->ed[i].edge != NULL && !(min->b->ed[i].b->isSpanning)) {
+            if (min->b->ed[i].b != NULL && !(min->b->ed[i].b->isSpanning)) {
                 if (min->b->ed[i].weight > 0)
                     // on tale
                     safe.push_back(min->b->ed[i]);
@@ -124,7 +123,7 @@ void prim(int width, int height) {
         //safe.remove(min);			 // removes the added edge from list for unneccessary further comparisons
         father[min->b->pos] = *min->a; // node a of edge is father of node b from the same edge
 
-        if (i == (width * height) - 2) {    // algorithm complete. stop execution.
+        if (i == (width * height) - 1) {    // algorithm complete. stop execution.
             min->b->current = false;
         }
     }
@@ -138,7 +137,6 @@ void CPU_prim_solver(int u, int v) {
         k = father[k.pos];
     }
     nodes[0][0].path = true;
-    // print position but don't work
     //for (int i = 0; i < mst.size(); i++)
     //    cout << mst[i].pos << endl;
 }
@@ -153,5 +151,15 @@ void CPU_prim_maze_generator(int *maze, int width, int height) {
     int v = height -1;
     setup(width, height);
     prim(width, height);
+    CPU_prim_solver(u,v);
 }
+
+int main() {
+    int width = 3;
+    int height = 4;
+    int maze[width * height];
+    CPU_prim_maze_generator(maze, width, height);
+    return 0;
+}
+
 

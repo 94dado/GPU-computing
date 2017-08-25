@@ -16,15 +16,15 @@ public:
     Node *b;             // node at the end of edge
     int weight;            // weight of edge. either 0 or 1
     bool minimal = false;   // true if part of minimal spanning tree
-    Edge *edge;
+
 
     // constructor
     Edge(Node *_a, Node *_b, Edge *_edge) {
-        edge = _edge;
         if (_a == NULL && _b == NULL && _edge == NULL)
-            weight = 1000;
+            weight = 100;
         else if (_edge == NULL) {
             weight = round(rand());
+            weight = weight % 2;
             a = _a;
             b = _b;
         }
@@ -35,7 +35,9 @@ public:
         }
     }
 
-    Edge(){}
+    Edge(){
+        weight = 100;
+    }
 };
 
 // Node with edges
@@ -56,10 +58,15 @@ public:
         x = _x;
         y = _y;
         pos = _pos;
-        ed.reserve(4);
+        for (int i = 0; i < 4; i++) {
+            ed.push_back(Edge());
+        }
     }
     
-    Node(){}
+    Node(){
+        pos = -1;
+    }
 };
 
 #endif
+
