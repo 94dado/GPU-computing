@@ -68,7 +68,7 @@ void setup (int width, int height) {
 
 void prim(int width, int height) {
     for (int i = 0; i != width * height; i++) {
-
+    	int count = 0;
         Edge *min = new Edge();
 
         // with each iteration (since a timer is used, rather with each call of this function)
@@ -88,7 +88,7 @@ void prim(int width, int height) {
         for (int l = 0; l < safe.size(); l++) {
 
             if (safe[l].a->isSpanning && safe[l].b->isSpanning) {
-                safe.pop_back();
+                safe.erase(safe.begin() + l);
                 continue;
             }
 
@@ -118,12 +118,12 @@ void prim(int width, int height) {
         min->minimal = true;		     // edge is part of MST
 
         // add edge and node to mst
+//        mst.push_back(min); non si puo' fare in c++
         mst.push_back(*min->b);
-
         //safe.remove(min);			 // removes the added edge from list for unneccessary further comparisons
         father[min->b->pos] = *min->a; // node a of edge is father of node b from the same edge
-
-        if (i == (width * height) - 1) {    // algorithm complete. stop execution.
+        count ++;						// addition of edge to MST
+        if (count == (width * height) - 1) {    // algorithm complete. stop execution.
             min->b->current = false;
         }
     }
