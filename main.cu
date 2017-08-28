@@ -18,7 +18,8 @@
 int main(){
 	//generate
 	int maze[DIM];
-	CPU_kruskal_maze_generator(maze, SIDE, SIDE);
+	//CPU_kruskal_maze_generator(maze, SIDE, SIDE);
+	GPU_division_maze_generator(maze, SIDE, SIDE);
 	PrintMaze(maze,SIDE,SIDE);
 	return 0;
 }

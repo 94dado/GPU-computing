@@ -39,6 +39,13 @@ __global__ void GPU_FillWall(int *array, int width, int dimension){
 	}
 }
 
+__global__ void GPU_FillOpen(int *array, int width, int dimension){
+	int index = width * blockIdx.x + threadIdx.x;
+	if(index < dimension) {
+		array[index] = OPEN;
+	}
+}
+
 void FindStartEnd(int *maze, int length, int *start, int *end){
 	int count = 0;
 	*start = *end = -1;

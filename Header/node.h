@@ -37,6 +37,8 @@ public:
 
     Edge(){
         weight = 100;
+        a = b = NULL;
+        minimal = false;
     }
 };
 
@@ -64,7 +66,7 @@ public:
     }
     
     Node(){
-        pos = -1;
+    	x = y = pos = -1;
     }
 };
 

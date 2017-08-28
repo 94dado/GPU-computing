@@ -3,4 +3,6 @@
 
 void CPU_division_maze_generator(int *maze, int width, int height);
 
+void GPU_division_maze_generator(int *maze, int width, int height);
+
 #endif
