@@ -49,15 +49,19 @@ void PrintMaze(Node *array, int width, int height){
 // Search the shortest path by parent node
 void ReachPath(int maxDist, Node *matrix, int width, int height) {
     for (int i = 0; i < width * height; i++) {
-        matrix[i].isNotWall = WALL;
+        matrix[i].isNotWall = false;
     }
     // the last is the end
     Node *currentNode = &matrix[endPath[0] * width + endPath[1]];
     // the first is the start
     Node *startNode = &matrix[startPath[0] * width + startPath[1]];
-    while ((currentNode->x != startNode->x) && currentNode->y != startNode->y) {
-        matrix[currentNode->x * width + currentNode->y].isNotWall = OPEN;
+    bool isReach = false;
+    while (!isReach) {
+        matrix[currentNode->x * width + currentNode->y].isNotWall = true;
         currentNode = currentNode->node;
+        if (currentNode->x == startNode->x && currentNode->y == startNode->y) {
+            isReach = true;
+        }
     }
 }
 
@@ -66,25 +70,25 @@ void FromCoordToNode(Node *matrix, int *mat, int width, int height) {
     bool findStart = false;
     for(int i = 0; i < width; i++){
         for(int j = 0; j < height; j++){
-            if (mat[i*width + j] == OPEN) {
+            if (mat[i*width + j] == 1) {
                 // is not a wall
-                matrix[i * width + j] = {i, j, 0, NULL, OPEN};
+                matrix[i * width + j] = {i, j, 0, NULL, true};
             }
             // is the start
-            else if (mat[i*width + j] == OBJECTIVE && !findStart) {
-                matrix[i * width + j] = {i, j, 0, NULL, OPEN};
+            else if (mat[i*width + j] == 2 && !findStart) {
+                matrix[i * width + j] = {i, j, 0, NULL, true};
                 startPath[0] = i;
                 startPath[1] = j;
                 findStart = true;
             }
             // is the end
-            else if (mat[i*width + j] == OBJECTIVE && findStart) {
-                matrix[i * width + j] = {i, j, 0, NULL, OPEN};
+            else if (mat[i*width + j] == 2 && findStart) {
+                matrix[i * width + j] = {i, j, 0, NULL, true};
                 endPath[0] = i;
                 endPath[1] = j;
             }
             else {
-                matrix[i * width + j] = {i, j, 0, NULL, WALL};
+                matrix[i * width + j] = {i, j, 0, NULL, false};
             }
         }
     }
@@ -101,14 +105,14 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
 
     // initially all cells are unvisited
     for (int k = 0; k < width * height; k++) {
-        visited[k] = WALL;
+        visited[k] = false;
     }
 
     // create an empty queue
     queue<Node> q;
 
     // mark source cell as visited and enqueue the source node
-    visited[startPath[0] * width + startPath[1]] = OPEN;
+    visited[startPath[0] * width + startPath[1]] = true;
     q.push(matrix[startPath[0] * width + startPath[1]]);
 
     // stores length of longest path from source to destination
@@ -139,7 +143,7 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
             // (i + row[k], j + col[k]) from current position
             if (isValid(matrix, visited, i + row[k], j + col[k], width, height)) {
                 // mark next cell as visited and enqueue it
-                visited[(i + row[k]) * width + (j + col[k])] = OPEN;
+                visited[(i + row[k]) * width + (j + col[k])] = true;
                 q.push({ i + row[k], j + col[k], dist + 1, &matrix[i * width + j], matrix[i * width + j].isNotWall });
                 matrix[(i + row[k]) * width + (j + col[k])].node = &matrix[i * width + j];
             }
