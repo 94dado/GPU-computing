@@ -12,8 +12,8 @@ int endPath[2];
 struct NodeStruct {
     // (x, y) represents matrix cell cordinates
     // dist represent its minimum distance from the source
-    int x, y, dist;
-    NodeStruct *NodeStruct;
+    int x, y;
+    NodeStruct *parent;
     bool isNotWall;
 };
 
@@ -46,7 +46,7 @@ void PrintNodeMaze(NodeStruct *array, int width, int height){
 }
 
 // Search the shortest path by parent NodeStruct
-void ReachPath(int maxDist, NodeStruct *matrix, int width, int height) {
+void ReachPath(NodeStruct *matrix, int width, int height) {
     for (int i = 0; i < width * height; i++) {
         matrix[i].isNotWall = false;
     }
@@ -57,7 +57,7 @@ void ReachPath(int maxDist, NodeStruct *matrix, int width, int height) {
     bool isReach = false;
     while (!isReach) {
         matrix[currentNodeStruct->x * width + currentNodeStruct->y].isNotWall = true;
-        currentNodeStruct = currentNodeStruct->NodeStruct;
+        currentNodeStruct = currentNodeStruct->parent;
         if (currentNodeStruct->x == startNodeStruct->x && currentNodeStruct->y == startNodeStruct->y) {
             isReach = true;
         }
@@ -71,23 +71,23 @@ void FromCoordToNodeStruct(NodeStruct *matrix, int *mat, int width, int height) 
         for(int j = 0; j < height; j++){
             if (mat[i*width + j] == 1) {
                 // is not a wall
-                matrix[i * width + j] = {i, j, 0, NULL, true};
+                matrix[i * width + j] = {i, j, NULL, true};
             }
             // is the start
             else if (mat[i*width + j] == 2 && !findStart) {
-                matrix[i * width + j] = {i, j, 0, NULL, true};
+                matrix[i * width + j] = {i, j, NULL, true};
                 startPath[0] = i;
                 startPath[1] = j;
                 findStart = true;
             }
             // is the end
             else if (mat[i*width + j] == 2 && findStart) {
-                matrix[i * width + j] = {i, j, 0, NULL, true};
+                matrix[i * width + j] = {i, j, NULL, true};
                 endPath[0] = i;
                 endPath[1] = j;
             }
             else {
-                matrix[i * width + j] = {i, j, 0, NULL, false};
+                matrix[i * width + j] = {i, j, NULL, false};
             }
         }
     }
@@ -114,9 +114,6 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
     visited[startPath[0] * width + startPath[1]] = true;
     q.push(matrix[startPath[0] * width + startPath[1]]);
 
-    // stores length of longest path from source to destination
-    int min_dist = INT_MAX;
-
     // run till queue is not empty
     while (!q.empty()) {
         // pop front NodeStruct from queue and process it
@@ -125,13 +122,12 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
 
         // (i, j) represents current cell and dist stores its
         // minimum distance from the source
-        int i = NodeStruct.x, j = NodeStruct.y, dist = NodeStruct.dist;
+        int i = NodeStruct.x, j = NodeStruct.y;
 
         // if destination is found, update min_dist and stop
         if (i == endPath[0] && j == endPath[1]) {
-            min_dist = dist;
-            ReachPath(min_dist, matrix, width, height);
-            PrintNodeMaze(matrix, width, height);
+            ReachPath(matrix, width, height);
+//            PrintNodeMaze(matrix, width, height);
             break;
         }
 
@@ -143,8 +139,8 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
             if (isValid(matrix, visited, i + row[k], j + col[k], width, height)) {
                 // mark next cell as visited and enqueue it
                 visited[(i + row[k]) * width + (j + col[k])] = true;
-                q.push({ i + row[k], j + col[k], dist + 1, &matrix[i * width + j], matrix[i * width + j].isNotWall });
-                matrix[(i + row[k]) * width + (j + col[k])].NodeStruct = &matrix[i * width + j];
+                q.push({ i + row[k], j + col[k], &matrix[i * width + j], matrix[i * width + j].isNotWall });
+                matrix[(i + row[k]) * width + (j + col[k])].parent = &matrix[i * width + j];
             }
         }
     }
@@ -155,3 +151,105 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
 //    else
 //        cout << "Destination can't be reached from given source" << endl;
 }
+
+__global__ void GPU_FromCoordToNodeStruct(NodeStruct *matrix, int *mat, int width, int height, int i, int *startPath, int *endPath){
+	bool findStart = false;
+	int j = blockIdx.x * width + threadIdx.x;
+	if (mat[i*width + j] == 1) {
+		// is not a wall
+		matrix[i * width + j] = {i, j, NULL, true};
+	}
+	// is the start
+	else if (mat[i*width + j] == 2 && !findStart) {
+		matrix[i * width + j] = {i, j, NULL, true};
+		startPath[0] = i;
+		startPath[1] = j;
+		findStart = true;
+	}
+	// is the end
+	else if (mat[i*width + j] == 2 && findStart) {
+		matrix[i * width + j] = {i, j, NULL, true};
+		endPath[0] = i;
+		endPath[1] = j;
+	}
+	else {
+		matrix[i * width + j] = {i, j, NULL, false};
+	}
+}
+
+__global__ void setupVisited(bool *visited, int width, int height){
+	int k = blockIdx.x * width + threadIdx.x;
+	visited[k] = false;
+}
+
+void GPU_bfs_maze_solver(int *mat, int width, int height){
+	// pass to NodeStruct coordinates
+	    NodeStruct matrix[width * height];
+
+	    //cuda variable
+	    NodeStruct *dev_matrix;
+	    int *dev_startPath, *dev_endPath;
+	    //memory allocation
+	    cudaMalloc(&dev_matrix, sizeof(NodeStruct) * width * height);
+	    cudaMalloc(&dev_startPath, sizeof(int) * 2);
+	    cudaMalloc(&dev_endPath, sizeof(int) * 2);
+	    //copy data on GPU
+	    cudaMemcpy(&dev_matrix, matrix, sizeof(NodeStruct) * width * height, cudaMemcpyHostToDevice);
+
+	    for(int i = 0; i < width; i++){
+	    	GPU_FromCoordToNodeStruct<<<width/32, 32>>>(matrix, mat, width, height, i, dev_startPath, dev_endPath);
+	    }
+	    cudaDeviceSynchronize();
+	    //get back all the data
+	    cudaMemcpy(matrix, dev_matrix, sizeof(NodeStruct) * width * height, cudaMemcpyDeviceToHost);
+	    cudaMemcpy(startPath, dev_startPath, sizeof(int) * 2, cudaMemcpyDeviceToHost);
+	    cudaMemcpy(endPath, dev_endPath, sizeof(int) * 2, cudaMemcpyDeviceToHost);
+
+	    // construct a matrix to keep track of visited cells
+	    bool visited[width * height];
+
+	    bool *dev_visited;
+	    cudaMalloc(&dev_visited, sizeof(bool) * width * height);
+	    // initially all cells are unvisited
+	   setupVisited<<<width, height>>>(dev_visited, width, height);
+	   cudaDeviceSynchronize();
+	   cudaMemcpy(visited, dev_visited, sizeof(bool) * width * height, cudaMemcpyDeviceToHost);
+	    // create an empty queue
+	    queue<NodeStruct> q;
+
+	    // mark source cell as visited and enqueue the source NodeStruct
+	    visited[startPath[0] * width + startPath[1]] = true;
+	    q.push(matrix[startPath[0] * width + startPath[1]]);
+
+	    // run till queue is not empty
+	    while (!q.empty()) {
+	        // pop front NodeStruct from queue and process it
+	        NodeStruct NodeStruct = q.front();
+	        q.pop();
+
+	        // (i, j) represents current cell and dist stores its
+	        // minimum distance from the source
+	        int i = NodeStruct.x, j = NodeStruct.y;
+
+	        // if destination is found, update min_dist and stop
+	        if (i == endPath[0] && j == endPath[1]) {
+	            ReachPath(matrix, width, height);
+	            PrintNodeMaze(matrix, width, height);
+	            break;
+	        }
+
+	        // check for all 4 possible movements from current cell
+	        // and enqueue each valid movement into the queue
+	        for (int k = 0; k < 4; k++) {
+	            // check if it is possible to go to position
+	            // (i + row[k], j + col[k]) from current position
+	            if (isValid(matrix, visited, i + row[k], j + col[k], width, height)) {
+	                // mark next cell as visited and enqueue it
+	                visited[(i + row[k]) * width + (j + col[k])] = true;
+	                q.push({ i + row[k], j + col[k], &matrix[i * width + j], matrix[i * width + j].isNotWall });
+	                matrix[(i + row[k]) * width + (j + col[k])].parent = &matrix[i * width + j];
+	            }
+	        }
+	    }
+}
+

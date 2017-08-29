@@ -24,6 +24,7 @@ int main(){
 	maze[1] = OBJECTIVE;
 	maze[79] = OBJECTIVE;
 	PrintMaze(maze,SIDE,SIDE);
-	CPU_bfs_maze_solver(maze,SIDE,SIDE);
+	GPU_bfs_maze_solver(maze,SIDE,SIDE);
+	cudaDeviceReset();
 	return 0;
 }
