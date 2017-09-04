@@ -13,18 +13,18 @@
 #include "Header/kruskal_maze_generator.h"
 #include "Header/bfs_maze_solver.h"
 
-#define DIM 25
-#define SIDE 5
+#define DIM 36
+#define SIDE 6
 
 int main(){
 	//generate
 	int maze[DIM];
 	//CPU_kruskal_maze_generator(maze, SIDE, SIDE);
-	CPU_backtracker_maze_generator(maze, SIDE, SIDE);
-	maze[1] = OBJECTIVE;
-	maze[DIM-2] = OBJECTIVE;
-	PrintMaze(maze,SIDE,SIDE);
-	GPU_bfs_maze_solver(maze,SIDE,SIDE);
+	GPU_dfs_maze_generator(maze, SIDE, SIDE);
+//	maze[1] = OBJECTIVE;
+//	maze[DIM-2] = OBJECTIVE;
+	PrintMaze(maze,SIDE - 1,SIDE - 1);
+//	GPU_bfs_maze_solver(maze,SIDE,SIDE);
 	cudaDeviceReset();
 	return 0;
 }
