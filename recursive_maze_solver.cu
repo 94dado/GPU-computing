@@ -109,3 +109,7 @@ void CPU_recursive_maze_solver(int *mazeInt, int width, int height) {
 
     PrintMaze(mazeInt, width, height);
 }
+
+void GPU_recursive_maze_solver(int *mazeInt, int width, int height){
+
+}

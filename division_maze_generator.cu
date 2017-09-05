@@ -145,7 +145,7 @@ class StackElement {
 		}
 
 		__device__ bool isEmpty(){
-			return x == y == width == height == orientation == random_value == -1;
+			return x == y == width == height == orientation == -1;
 		}
 
 		__device__ void copyAttributes(int &_x, int &_y, int &_width, int &_height, int &_orientation, int &_rand){
