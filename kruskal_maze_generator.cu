@@ -381,7 +381,7 @@ void GPU_kruskal_maze_generator(int *maze, int width, int height) {
 	int newWidth = (width -1)/2;
 	int newHeight = (height -1)/2;
 	pair<int, int> all_edges[newWidth * newHeight * 2];
-	pair<int, int> mst_edges[newWidth * newHeight * 2];
+	pair<int, int> mst_edges[newWidth * newHeight];
 
 	// initialize all edges matrix
 	pair<int, int> *dev_edges;
