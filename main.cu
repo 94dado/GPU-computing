@@ -20,11 +20,10 @@
 int main(){
 	//generate
 	int maze[DIM];
-	CPU_backtracker_maze_generator(maze, SIDE, SIDE);
-	maze[1] = OBJECTIVE;
-	maze[DIM-2] = OBJECTIVE;
+	GPU_kruskal_maze_generator(maze, SIDE, SIDE);
+//	maze[1] = OBJECTIVE;
+//	maze[DIM-2] = OBJECTIVE;
 	PrintMaze(maze,SIDE,SIDE);
-	CPU_recursive_maze_solver(maze,SIDE,SIDE);
 	cudaDeviceReset();
 	return 0;
 }

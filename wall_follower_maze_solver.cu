@@ -133,6 +133,7 @@ void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width,
 //				cout << "reached the end" << endl;
 				//finish!!!!
 				done = true;
+				break;
 			}
 		} else {
 			//no moves available. I'm simply fucked
@@ -299,6 +300,7 @@ void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width,int 
 //				cout << "reached the end" << endl;
 				//finish!!!!
 				done = true;
+				break;
 			}
 		} else {
 			//no moves available. I'm simply fucked
