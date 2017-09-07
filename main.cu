@@ -14,15 +14,17 @@
 #include "Header/bfs_maze_solver.h"
 #include "Header/recursive_maze_solver.h"
 
-#define DIM 25
-#define SIDE 5
+#define DIM 49
+#define SIDE 7
 
 int main(){
 	//generate
 	int maze[DIM];
-	GPU_kruskal_maze_generator(maze, SIDE, SIDE);
+	CPU_dfs_maze_generator(maze, SIDE, SIDE);
+	PrintMaze(maze,SIDE,SIDE);
 //	maze[1] = OBJECTIVE;
 //	maze[DIM-2] = OBJECTIVE;
+	GPU_recursive_maze_solver(maze,SIDE,SIDE);
 	PrintMaze(maze,SIDE,SIDE);
 	cudaDeviceReset();
 	return 0;

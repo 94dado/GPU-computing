@@ -202,8 +202,8 @@ void randomPoint(int *maze_size, bool part){
 void CPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	srand(time(NULL));
 
-	width--;
-	height--;
+//	width--;
+//	height--;
 
 	int maze_size[2] = {width, height};
 
@@ -242,6 +242,7 @@ __global__ void GPU_initializeMaze(bool *maze, int width, int height, int a){
 	}
 	maze[a * height * 2 + (2*b)] = true;
 	maze[a * height * 2 + (2*b) + 1] = is_border;
+//	printf("values: %d,%d\n",maze[a * height * 2 + (2*b)],maze[a * height * 2 + (2*b) + 1]);
 
 }
 
@@ -286,7 +287,7 @@ void GPU_randomPoint(bool *maze, int *maze_size, bool part){
         dfs_path.push_back(location);
     }
     maze[location[1] * maze_size[0] * 2 + (2 * location[0])] = false;
-    maze[location[1] * maze_size[0] * 2 + (2 * location[0])] = true;
+    maze[location[1] * maze_size[0] * 2 + (2 * location[0] + 1)] = true;
 }
 
 // Select a random direction based on our options, append it to the current path, and move there
@@ -314,7 +315,7 @@ bool GPU_randomMove(bool *maze, int *maze_size, bool first_move){
            dfs_path.back()[0] + possible_pmd[0] * 2 < maze_size[0] - 1 &&
            dfs_path.back()[1] + possible_pmd[1] * 2 > 0 &&
            dfs_path.back()[1] + possible_pmd[1] * 2 < maze_size[1] - 1){
-            if(!maze[(dfs_path.back()[1] + possible_pmd[1] * 2) * maze_size[0] + (dfs_path.back()[0] + possible_pmd[0] * 2 + 1)]){
+            if(!maze[(dfs_path.back()[1] + possible_pmd[1] * 2) * maze_size[0] * 2 + (dfs_path.back()[0] + possible_pmd[0] * 2) * 2 + 1]){
                 vector< int > possible_move_delta = {possible_pmd[0], possible_pmd[1]};
 
                 unvisited_neighbors.push_back(possible_move_delta);
@@ -333,8 +334,8 @@ bool GPU_randomMove(bool *maze, int *maze_size, bool first_move){
 
             dfs_path.push_back(new_location);
 
-            maze[dfs_path.back()[1] * 2 * maze_size[0] + (2 * dfs_path.back()[0])] = false;
-            maze[dfs_path.back()[1] * 2 * maze_size[0] + (2 * dfs_path.back()[0]) + 1] = true;
+            maze[(dfs_path.back()[1] * 2 * maze_size[0]) + (2 * dfs_path.back()[0])] = false;
+            maze[(dfs_path.back()[1] * 2 * maze_size[0]) + (2 * dfs_path.back()[0]) + 1] = true;
         }
 
         return true;
@@ -372,9 +373,9 @@ void GPU_generateMaze(int *maze_size, bool *maze){
     }
 }
 
-__global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int a){
+__global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int height, int a){
 	int b = threadIdx.x;
-	if ((a == 0 && maze[a * width * 2 + (2*b)] == 0) || (a == width-1 && maze[a * width * 2 + (2*b)] == 0) || (b == 0 && maze[a * width * 2 + (2*b)] == 0) || (b == width -1 && maze[a * width + (2*b)] == 0)) {
+	if ((a == 0 && maze[a * width * 2 + (2*b)] == 0) || (a == width-1 && maze[a * width * 2 + (2*b)] == 0) || (b == 0 && maze[a * width * 2 + (2*b)] == 0) || (b == height -1 && maze[a * width + (2*b)] == 0)) {
 		coordMaze[a*width + b] = OBJECTIVE;
 	}
 	else {
@@ -389,7 +390,7 @@ __global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int a){
 
 void GPU_DFSToCoord(bool *dev_maze, int *size_maze, int *coordMaze){
     for(int a = 0; a < size_maze[0]; a++){
-    	GPU_putCoord<<<1,size_maze[1]>>>(dev_maze, coordMaze, size_maze[0], a);
+    	GPU_putCoord<<<1,size_maze[1]>>>(dev_maze, coordMaze, size_maze[0], size_maze[1], a);
 	}
     cudaDeviceSynchronize();
 }
@@ -422,4 +423,20 @@ void GPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	cudaMemcpy(dev_maze, maze, sizeof(bool) * 2 * width * height, cudaMemcpyHostToDevice);
 	GPU_DFSToCoord(dev_maze, mazeSize, dev_coordMaze);
 	cudaMemcpy(coordMaze, dev_coordMaze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
+}
+
+vector< vector< vector< bool>>> arrayToVec( bool *maze, int width, int height){
+	vector< vector< vector< bool>>> dest;
+	for(int i = 0; i< width; i++){
+		dest[i].push_back({});
+		for(int j=0; j<height;j++){
+			dest[i][j].push_back(maze[i*width*2 + j*2]);
+			dest[i][j].push_back(maze[i*width*2 + j*2 + 1]);
+		}
+	}
+	return dest;
+}
+
+void tempFunction(int *coordMaze, int width, int height){
+
 }
