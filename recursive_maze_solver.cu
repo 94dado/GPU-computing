@@ -157,12 +157,6 @@ __global__ void setupArray(int *array){
 
 __global__ void GPU_find_path(char *maze, int *result, int height) {
 	int index = blockDim.x * blockIdx.x + threadIdx.x;
-	int width = blockDim.x;
-	int x = blockIdx.x;
-	int y = threadIdx.x;
-	int counter_not_ready = 0;
-//	printf("index: %d, width: %d, x: %d, y: %d\n",index,width,x,y);
-    // If x,y is outside maze, return false.
 
     // If x,y is the goal, return true.
     if ( maze[index] == 'G') {
@@ -175,75 +169,9 @@ __global__ void GPU_find_path(char *maze, int *result, int height) {
     	result[index] = 0;
     	return;
     }
-
-
-    if (!( x < 0 || x > width - 1 || y-1 < 0 || y-1 > height - 1) ){
-//    	printf("1\n");
-		// If find_path North of x,y is true, return true.
-		if(result[x * width + (y-1)] == -1){
-			counter_not_ready++;
-		}else if(result[x * width + (y-1)] == 1){
-		    // Mark x,y part of solution path.
-		    maze[index] = '+';
-			result[index] = 1;
-			return;
-		}
-    }
-
-    if (!( x + 1 < 0 || x + 1 > width - 1 || y < 0 || y > height - 1 )){
-//    	printf("2\n");
-		// If find_path East of x,y is true, return true.
-		if(result[(x+1) * width + y] == -1){
-			counter_not_ready++;
-		}else if(result[(x+1) * width + y] == 1){
-		    // Mark x,y part of solution path.
-		    maze[index] = '+';
-			result[index] = 1;
-			return;
-		}
-    }
-
-    if (!( x < 0 || x > width - 1 || y + 1 < 0 || y + 1 > height - 1 )){
-//    	printf("3\n");
-    	// If find_path South of x,y is true, return true.
-		if(result[x * width + (y+1)] == -1){
-			counter_not_ready++;
-		}else if(result[x * width + (y+1)] == 1){
-		    // Mark x,y part of solution path.
-		    maze[index] = '+';
-			result[index] = 1;
-			return;
-		}
-    }
-
-    if (!( x - 1 < 0 || x - 1 > width - 1 || y < 0 || y > height - 1 )){
-//    	printf("4\n");
-		// If find_path West of x,y is true, return true.
-		if(result[(x-1) * width + y] == -1){
-			counter_not_ready++;
-		}else if(result[(x-1) * width + y] == 1){
-		    // Mark x,y part of solution path.
-		    maze[index] = '+';
-			result[index] = 1;
-			return;
-		}
-    }
-    //if not everybody is false
-    if(counter_not_ready > 0){
-    	return;
-    }
-
-    // Unmark x,y as part of solution path.
-    maze[index] = 'x';
-    result[index] = 0;
-    return;
-}
-
-__global__ void finished(int *result, bool *finished){
-	int index = blockDim.x * blockIdx.x + threadIdx.x;
-	if(result[index] == -1){
-		*finished = false;
-	}
+	// Mark x,y part of solution path.
+	maze[index] = '+';
+	result[index] = 1;
 }
 
 __global__ void setupStart(char *maze, int *pathStart, int width){
@@ -303,21 +231,12 @@ void GPU_recursive_maze_solver(int *mazeInt, int width, int height){
 	setupStart<<<1,1>>>(dev_mazeChar, dev_pathStart, width);
 	cudaDeviceSynchronize();
 
+	GPU_find_path<<<width,height>>>(dev_mazeChar,dev_result, height);
+	cudaDeviceSynchronize();
 
-	bool *dev_finished;
 	bool finish = false;
+	bool *dev_finished;
 	cudaMalloc(&dev_finished, sizeof(bool));
-	while(!finish){
-		finish = true;
-		cudaMemcpy(dev_finished,&finish,sizeof(bool),cudaMemcpyHostToDevice);
-		GPU_find_path<<<width,height>>>(dev_mazeChar,dev_result, height);
-		cudaDeviceSynchronize();
-
-		finished<<<width,height>>>(dev_result,dev_finished);
-		cudaDeviceSynchronize();
-		cudaMemcpy(&finish,dev_finished,sizeof(bool),cudaMemcpyDeviceToHost);
-	}
-	finish = false;
 	while(!finish){
 		finish = true;
 		cudaMemcpy(dev_finished,&finish,sizeof(bool),cudaMemcpyHostToDevice);
@@ -326,6 +245,7 @@ void GPU_recursive_maze_solver(int *mazeInt, int width, int height){
 
 		cudaMemcpy(&finish,dev_finished,sizeof(bool),cudaMemcpyDeviceToHost);
 	}
+
 	GPU_FromCharToCoord<<<width,height>>>(dev_mazeInt, dev_mazeChar, dev_pathStart);
 	cudaMemcpy(mazeInt,dev_mazeInt,sizeof(int) * width * height, cudaMemcpyDeviceToHost);
 }
