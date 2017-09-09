@@ -89,13 +89,13 @@ void division(int side, int *maze1, int *maze2) {
 	double diff;
 	cout << endl << "DIVISION MAZE GENERATOR WITH CPU" << endl;
 	double start = seconds();
-	CPU_division_maze_generator(maze1, side, side);
+//	CPU_division_maze_generator(maze1, side, side);
 	diff = seconds()-start;
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	PrintMaze(maze1,side,side);
 	cout << endl << "DIVISION MAZE GENERATOR WITH GPU" << endl;
 	start = seconds();
-	GPU_division_maze_generator(maze2,side,side);
+//	GPU_division_maze_generator(maze2,side,side);
 	diff = seconds()-start;
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	PrintMaze(maze2,side,side);
@@ -153,45 +153,46 @@ void wall_follower(int side, int startP, int endP, int *maze1, int *maze2) {
 	cudaDeviceReset();
 }
 
-int main(){
-	int side = 1;
-	for (int i = 0; i < NUMBER_OF_TEST; i++) {
-		// setted size of the matrix
-		side *= 10;
-		int dim = side * side;
-		int maze1[dim];
-		int maze2[dim];
-
-		//DFS
-		dfs(side, maze1, maze2);
-		// Cellular automata
-		cellular(side-1, maze1,maze2);
-
-		// Backtracker
-		backtracker(side, maze1, maze2);
-		// Wall follower
-		wall_follower(side, 1, dim-2, maze1,maze2);
-
-
-		// Division
-		division(side, maze1, maze2);
-		// BFS
-		bfs(side, maze1,maze2);
-
-		// Kruskal
-		kruskal(side-1, maze1, maze2);
-		// Recursive
-		recursive(side-1, maze1,maze2);
-
-	}
-	return 0;
-}
-
-//int main() {
-//	int side = 7;
-//	int dim = side * side;
-//	int maze[dim];
-//	GPU_dfs_maze_generator(maze,side,side);
-//	PrintMaze(maze,side,side);
+//int main(){
+//	int side = 1;
+//	for (int i = 0; i < NUMBER_OF_TEST; i++) {
+//		// setted size of the matrix
+//		side *= 10;
+//		int dim = side * side;
+//		int maze1[dim];
+//		int maze2[dim];
+//
+//		//DFS
+//		dfs(side, maze1, maze2);
+//		// Cellular automata
+//		cellular(side-1, maze1,maze2);
+//
+//		// Backtracker
+//		backtracker(side, maze1, maze2);
+//		// Wall follower
+//		wall_follower(side, 1, dim-2, maze1,maze2);
+//
+//
+//		// Division
+//		division(side, maze1, maze2);
+//		// BFS
+//		bfs(side, maze1,maze2);
+//
+//		// Kruskal
+//		kruskal(side-1, maze1, maze2);
+//		// Recursive
+//		recursive(side-1, maze1,maze2);
+//
+//	}
 //	return 0;
 //}
+
+int main() {
+#define side 10
+	//int side = 10;
+	int dim = side * side;
+	int maze[dim];
+	GPU_division_maze_generator(maze,side,side);
+	PrintMaze(maze,side,side);
+	return 0;
+}
