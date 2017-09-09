@@ -198,12 +198,10 @@ void randomPoint(int *maze_size, bool part){
     maze[location[1]][location[0]][1] = true;
 }
 
-// maze[(width-1) * (height-1)], coord must be initialize like this
+// The width and height must be greater than or equal to 4 or it won't work
+// The width and height must be odd or else it won't work
 void CPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	srand(time(NULL));
-
-//	width--;
-//	height--;
 
 	int maze_size[2] = {width, height};
 
@@ -228,9 +226,18 @@ void CPU_dfs_maze_generator(int *coordMaze, int width, int height){
 
 
 
+
+vector< vector< vector< bool>>> arrayToVec( bool *maze, int width, int height);
+void PrintBoolMaze(bool *array, int width, int height);
+void PrintPath();
+
+
+
+
 // Initialize the maze vector with a completely-filled grid with the size the user specified
-__global__ void GPU_initializeMaze(bool *maze, int width, int height, int a){
-	int b = threadIdx.x;
+__global__ void GPU_initializeMaze(bool *maze, int width, int height){
+	int b = threadIdx.x;	//width
+	int a = blockIdx.x;		//height
 	bool is_border;
 
 	if(a == 0 || a == height - 1 ||
@@ -240,9 +247,9 @@ __global__ void GPU_initializeMaze(bool *maze, int width, int height, int a){
 	else {
 		is_border = false;
 	}
-	maze[a * height * 2 + (2*b)] = true;
-	maze[a * height * 2 + (2*b) + 1] = is_border;
-//	printf("values: %d,%d\n",maze[a * height * 2 + (2*b)],maze[a * height * 2 + (2*b) + 1]);
+	maze[a * width * 2 + (2*b)] = true;
+	maze[a * width * 2 + (2*b) + 1] = is_border;
+//	printf("a:%d, b:%d, values:(%d,%d)\n",a,b,maze[a * width * 2 + (2*b)],maze[a * width * 2 + (2*b) + 1]);
 
 }
 
@@ -333,7 +340,9 @@ bool GPU_randomMove(bool *maze, int *maze_size, bool first_move){
             new_location.push_back(dfs_path.back()[1] + unvisited_neighbors[random_neighbor][1]);
 
             dfs_path.push_back(new_location);
-
+            cout << "signed:(" << dfs_path.back()[0];
+            cout << "," << (dfs_path.back()[1]);
+            cout << ")" << endl;
             maze[(dfs_path.back()[1] * 2 * maze_size[0]) + (2 * dfs_path.back()[0])] = false;
             maze[(dfs_path.back()[1] * 2 * maze_size[0]) + (2 * dfs_path.back()[0]) + 1] = true;
         }
@@ -349,7 +358,9 @@ void GPU_generateMaze(int *maze_size, bool *maze){
     bool first_move = true;
     bool success = true;
 
-    while((int) dfs_path.size() > 1 - first_move){
+    while((int) dfs_path.size() > 1 - first_move) {
+//    	cout << "path:" << endl;
+//    	PrintPath();
         if(!success){
             dfs_path.pop_back();
 
@@ -364,8 +375,11 @@ void GPU_generateMaze(int *maze_size, bool *maze){
         }
 
         while(success){
+//        	cout << "before random" << endl;
+//        	PrintBoolMaze(maze,maze_size[0],maze_size[1]);
             success = GPU_randomMove(maze, maze_size, first_move);
-
+//            cout << "after random" << endl;
+//            PrintBoolMaze(maze,maze_size[0],maze_size[1]);
             if(first_move){
                 first_move = false;
             }
@@ -373,13 +387,15 @@ void GPU_generateMaze(int *maze_size, bool *maze){
     }
 }
 
-__global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int height, int a){
-	int b = threadIdx.x;
-	if ((a == 0 && maze[a * width * 2 + (2*b)] == 0) || (a == width-1 && maze[a * width * 2 + (2*b)] == 0) || (b == 0 && maze[a * width * 2 + (2*b)] == 0) || (b == height -1 && maze[a * width + (2*b)] == 0)) {
+__global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int height){
+	int a = blockIdx.x;			//height
+	int b = threadIdx.x;		//width
+	if ((a == 0 && maze[a * width * 2 + (2*b)] == 0) || (a == height-1 && maze[a * width * 2 + (2*b)] == 0) || (b == 0 && maze[a * width * 2 + (2*b)] == 0) || (b == width -1 && maze[a * width * 2 + (2*b)] == 0)) {
+//		printf("a:%d, b:%d\n",a,b);
 		coordMaze[a*width + b] = OBJECTIVE;
 	}
 	else {
-		if (maze[a * width * 2 +(2*b)]) {
+		if (maze[a * width * 2 +(2*b)] == 1) {
 			coordMaze[a*width + b] = WALL;
 		}
 		else {
@@ -389,37 +405,31 @@ __global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int height, 
 }
 
 void GPU_DFSToCoord(bool *dev_maze, int *size_maze, int *coordMaze){
-    for(int a = 0; a < size_maze[0]; a++){
-    	GPU_putCoord<<<1,size_maze[1]>>>(dev_maze, coordMaze, size_maze[0], size_maze[1], a);
-	}
+    GPU_putCoord<<<size_maze[1],size_maze[0]>>>(dev_maze, coordMaze, size_maze[0], size_maze[1]);
     cudaDeviceSynchronize();
 }
 
-// The width and height must be greater than or equal to 5 or it won't work
-// The width and height must be odd or else we will have extra walls
+// The width and height must be greater than or equal to 4 or it won't work
+// The width and height must be even or else it won't work
 void GPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	srand(time(NULL));
-
-	width--;
-	height--;
+	if (width %2 == 0) width--;
+	if (height%2 == 0) height--;
+	int mazeSize[] = {width, height};
 	bool maze[height * width * 2];
 	bool *dev_maze;
 	int *dev_coordMaze;
 
 	cudaMalloc(&dev_maze, sizeof(bool) * 2 * width * height);
 	cudaMalloc(&dev_coordMaze, sizeof(int) * width * height);
-	for(int a = 0; a < height; a++){
-		GPU_initializeMaze<<<1,width>>>(dev_maze, width, height,a );
-	}
+	GPU_initializeMaze<<<height,width>>>(dev_maze, width, height);
 	cudaDeviceSynchronize();
 	//copy data on cpu
 	cudaMemcpy(maze,dev_maze, sizeof(bool) * 2 * width * height, cudaMemcpyDeviceToHost);
-
-	int mazeSize[] = {width, height};
 	GPU_randomPoint(maze, mazeSize, false);
 	GPU_randomPoint(maze, mazeSize, true);
-	GPU_generateMaze(mazeSize, maze);
 
+	GPU_generateMaze(mazeSize, maze);
 	cudaMemcpy(dev_maze, maze, sizeof(bool) * 2 * width * height, cudaMemcpyHostToDevice);
 	GPU_DFSToCoord(dev_maze, mazeSize, dev_coordMaze);
 	cudaMemcpy(coordMaze, dev_coordMaze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
@@ -437,6 +447,23 @@ vector< vector< vector< bool>>> arrayToVec( bool *maze, int width, int height){
 	return dest;
 }
 
-void tempFunction(int *coordMaze, int width, int height){
+void PrintBoolMaze(bool *array, int width, int height){
+	int i,j;
+	for(i = 0; i < height; i++){
+		for(j = 0; j < width; j++){
+			cout << "(" << array[i*height*2 + j*2] << "," << array[i*height*2 + j*2 + 1] << ") ";
+		}
+		cout << endl;
+	}
+	cout << endl;
+}
 
+void PrintPath(){
+	for(int i = 0; i < dfs_path.size(); i++){
+		cout << "(";
+		for(int j=0; j < dfs_path[i].size(); j++){
+			cout << dfs_path[i][j] << " ";
+		}
+		cout << ")" << endl;
+	}
 }
