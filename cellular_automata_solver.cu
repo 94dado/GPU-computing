@@ -18,7 +18,9 @@ int check_neighbour_open(int *maze, int length, int row_length, int pos, int nei
 	return 0;
 }
 
-void CPU_cellular_automata_solver(int *maze, int length, int row_length){
+void CPU_cellular_automata_solver(int *maze, int width, int height){
+	int row_length= width;
+	int length = width*height;
 	bool again = true;
 	int i;
 	while(again){
@@ -84,7 +86,9 @@ __global__ void GPU_check_neighbour_open(int *maze, int length, int row_length, 
 
 }
 
-void GPU_cellular_automata_solver(int *maze, int length, int row_length){
+void GPU_cellular_automata_solver(int *maze, int width, int height){
+	int row_length = width;
+	int length = width * height;
 	bool again = true;
 	int *dev_maze;
 	bool *dev_again;

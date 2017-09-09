@@ -340,9 +340,9 @@ bool GPU_randomMove(bool *maze, int *maze_size, bool first_move){
             new_location.push_back(dfs_path.back()[1] + unvisited_neighbors[random_neighbor][1]);
 
             dfs_path.push_back(new_location);
-            cout << "signed:(" << dfs_path.back()[0];
-            cout << "," << (dfs_path.back()[1]);
-            cout << ")" << endl;
+//            cout << "signed:(" << dfs_path.back()[0];
+//            cout << "," << (dfs_path.back()[1]);
+//            cout << ")" << endl;
             maze[(dfs_path.back()[1] * 2 * maze_size[0]) + (2 * dfs_path.back()[0])] = false;
             maze[(dfs_path.back()[1] * 2 * maze_size[0]) + (2 * dfs_path.back()[0]) + 1] = true;
         }
@@ -426,6 +426,7 @@ void GPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	cudaDeviceSynchronize();
 	//copy data on cpu
 	cudaMemcpy(maze,dev_maze, sizeof(bool) * 2 * width * height, cudaMemcpyDeviceToHost);
+//	PrintBoolMaze(maze, width, height);
 	GPU_randomPoint(maze, mazeSize, false);
 	GPU_randomPoint(maze, mazeSize, true);
 

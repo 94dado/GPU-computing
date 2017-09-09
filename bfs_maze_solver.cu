@@ -29,20 +29,22 @@ bool isValid(NodeStruct *mat, bool *visited, int row, int col, int width, int he
 }
 
 // print the path
-void PrintNodeMaze(NodeStruct *array, int width, int height){
+void PrintNodeMaze(NodeStruct *array, int *mat, int width, int height){
     int i,j;
     for(i = 0; i < height; i++){
         for(j = 0; j < width; j++){
             if ((array[i*width + j].x == startPath[0] && array[i*width + j].y == startPath[1]) || (array[i*width + j].x == endPath[0] && array[i*width + j].y == endPath[1])) {
-                cout << 2 << " ";
+//                cout << 2 << " ";
+                mat[i*width + j] = 2;
             }
             else {
-                cout << array[i*width + j].isNotWall << " ";
+//                cout << array[i*width + j].isNotWall << " ";
+                mat[i*width + j] = array[i*width+j].isNotWall;
             }
         }
-        cout << endl;
+//        cout << endl;
     }
-    cout << endl;
+//    cout << endl;
 }
 
 // Search the shortest path by parent NodeStruct
@@ -127,7 +129,7 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
         // if destination is found, update min_dist and stop
         if (i == endPath[0] && j == endPath[1]) {
             ReachPath(matrix, width, height);
-            PrintNodeMaze(matrix, width, height);
+            PrintNodeMaze(matrix, mat, width, height);
             break;
         }
 
@@ -172,6 +174,19 @@ __global__ void setupVisited(bool *visited, int width, int height){
 __global__ void SetWallNode(NodeStruct *matrix, int width, int dimension, bool value){
 	int i = blockIdx.x * width +threadIdx.x;
 	if(i < dimension) matrix[i].isNotWall = value;
+}
+
+__global__ void GPU_PrintNodeMaze(NodeStruct *array, int *mat, int *startPath, int *endPath, int width, int height){
+    int i = blockIdx.x;
+    int j = threadIdx.x;
+	if ((array[i*width + j].x == startPath[0] && array[i*width + j].y == startPath[1]) || (array[i*width + j].x == endPath[0] && array[i*width + j].y == endPath[1])) {
+//                cout << 2 << " ";
+		mat[i*width + j] = 2;
+	}
+	else {
+//                cout << array[i*width + j].isNotWall << " ";
+		mat[i*width + j] = array[i*width+j].isNotWall;
+	}
 }
 
 // Search the shortest path by parent NodeStruct
@@ -220,7 +235,6 @@ void GPU_bfs_maze_solver(int *mat, int width, int height){
 	    cudaMemcpy(startPath, dev_path, sizeof(int) * 2, cudaMemcpyDeviceToHost);
 	    cudaMemcpy(endPath, dev_path + 2, sizeof(int) * 2, cudaMemcpyDeviceToHost);
 //	    PrintNodeMaze(matrix, width, height);
-	    cudaFree(dev_mat);
 //	    printf("start: %d,%d  end: %d,%d",startPath[0],startPath[1],endPath[0],endPath[1]);
 	    // construct a matrix to keep track of visited cells
 	    bool visited[width * height];
@@ -253,7 +267,15 @@ void GPU_bfs_maze_solver(int *mat, int width, int height){
 //	        cout << "endPath: " << endPath[0] << "," << endPath[1] << endl;
 	        if (i == endPath[0] && j == endPath[1]) {
 	            GPU_ReachPath(matrix, dev_matrix, width, height);
-	            PrintNodeMaze(matrix, width, height);
+	            int *dev_start,*dev_end;
+	            cudaMalloc(&dev_start,sizeof(int)*2);
+	            cudaMalloc(&dev_end,sizeof(int)*2);
+	            cudaMemcpy(dev_start,startPath,sizeof(int)*2,cudaMemcpyHostToDevice);
+	            cudaMemcpy(dev_end,endPath,sizeof(int)*2,cudaMemcpyHostToDevice);
+	            cudaMemcpy(dev_matrix,matrix,sizeof(NodeStruct)*width*height, cudaMemcpyHostToDevice);
+
+	            GPU_PrintNodeMaze<<<height,width>>>(dev_matrix, dev_mat, dev_start, dev_end, width, height);
+	            cudaMemcpy(mat,dev_mat,sizeof(int)*width*height,cudaMemcpyDeviceToHost);
 	            break;
 	        }
 
