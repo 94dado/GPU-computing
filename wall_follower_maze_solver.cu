@@ -244,9 +244,9 @@ void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width,int 
 	//max possible moves
 	int maxMoves = (width * height) + 2;
 	//path that i'm following
-	int moves[maxMoves];
+	int *moves = new int[maxMoves];
 	//all cell visited
-	int already_seen[width * height];
+	int *already_seen = new int[width * height];
 
 	int *dev_already_seen;
 	cudaMalloc(&dev_already_seen, sizeof(int) * width * height);
@@ -304,7 +304,7 @@ void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width,int 
 			}
 		} else {
 			//no moves available. I'm simply fucked
-			cout << "no moves available. FUCK!" << endl;
+			cout << "no moves available" << endl;
 			return;
 		}
 	}
@@ -317,5 +317,7 @@ void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width,int 
 		//no solution
 		cout << "solution not found" << endl;
 	}
+	free(moves);
+	free(already_seen);
 	cudaDeviceReset();
 }

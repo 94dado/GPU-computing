@@ -206,7 +206,13 @@ class StackElement {
 		int orientation;	//orientation for the algorithm
 		int random_value;	//a random value
 
-		//constructor
+		//constructors
+
+		StackElement(){
+			x = y = width = height = orientation = random_value = -1;
+		}
+
+
 		StackElement(int _x, int _y, int _width, int _height){
 			x = _x;
 			y = _y;
@@ -226,7 +232,7 @@ class StackElement {
 		}
 
 
-		__device__ StackElement(){
+		__device__ StackElement(int useless){
 			x = y = width = height = orientation = random_value = -1;
 		}
 
@@ -264,8 +270,8 @@ __global__ void GPU_iterator_divide(int *maze, int real_width, StackElement *sta
 		int nX, nY, w, h;
 		//check if I don't have to make this iteration
 		if(width < MAZE_RESOLUTION || height < MAZE_RESOLUTION){
-			new_stack[2 * index] = StackElement();
-			new_stack[2* index + 1] = StackElement();
+			new_stack[2 * index] = StackElement(NULL);
+			new_stack[2* index + 1] = StackElement(NULL);
 			atomicAdd(size_new_stack, 2);
 			return;
 		}
@@ -346,7 +352,7 @@ void GPU_recursive_divide(int *maze,int width, int height){
 	int default_size = 0;
 	//create stack
 	int stack_dimension = width * height * 100;
-	StackElement stack[stack_dimension];
+	StackElement *stack = new StackElement[stack_dimension];
 	//stack for device
 	StackElement *dev_stack, *dev_temp_stack;
 	cudaMalloc(&dev_temp_stack, sizeof(StackElement) * stack_dimension);
@@ -380,10 +386,11 @@ void GPU_recursive_divide(int *maze,int width, int height){
 		cudaMemcpy(stack, dev_temp_stack, sizeof(StackElement) * size_stack, cudaMemcpyDeviceToHost);
 		cudaMemcpy(&recursive_calls, dev_recursive, sizeof(int), cudaMemcpyDeviceToHost);
 		//free dev_stack
-		cudaFree(dev_stack);
+//		cudaFree(dev_stack);
 		//check if I have finished
 		if(recursive_calls == 0) again = false;
 	}
+	free(stack);
 }
 
 __global__ void GPU_convert_maze(int *maze, int *newMaze, int width, int height, int newWidth, int newHeight, int sud, int est){
