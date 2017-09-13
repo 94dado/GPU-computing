@@ -99,10 +99,10 @@ void FromCoordToNodeStruct(NodeStruct *matrix, int *mat, int width, int height) 
 // cell (i, j) to destination cell (x, y)
 void CPU_bfs_maze_solver(int *mat, int width, int height) {
     // pass to NodeStruct coordinates
-    NodeStruct matrix[width * height];
+    NodeStruct *matrix = new NodeStruct[width * height];
     FromCoordToNodeStruct(matrix, mat, width, height);
     // construct a matrix to keep track of visited cells
-    bool visited[width * height];
+    bool *visited = new bool[width * height];
 
     // initially all cells are unvisited
     for (int k = 0; k < width * height; k++) {
@@ -146,6 +146,8 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
             }
         }
     }
+    delete matrix;
+    delete visited;
 }
 
 __global__ void GPU_FromCoordToNodeStruct(NodeStruct *matrix, int *mat, int width, int height, int i, int *path, int *index){
@@ -213,85 +215,87 @@ void GPU_ReachPath(NodeStruct *matrix, NodeStruct *dev_matrix, int width, int he
 
 void GPU_bfs_maze_solver(int *mat, int width, int height){
 	// pass to NodeStruct coordinates
-	    NodeStruct matrix[width * height];
-	    int * dev_mat;
-		cudaMalloc(&dev_mat, sizeof(int) * width * height);
-	    //cuda variable
-	    NodeStruct *dev_matrix;
-	    int *dev_path, *dev_index, index = 0;
-	    //memory allocation
-	    cudaMalloc(&dev_matrix, sizeof(NodeStruct) * width * height);
-	    cudaMalloc(&dev_path, sizeof(int) * 4);
-	    cudaMalloc(&dev_index, sizeof(int));
-	    //copy data on GPU
-	    cudaMemcpy(dev_mat, mat, sizeof(int) * width * height, cudaMemcpyHostToDevice);
-	    cudaMemcpy(dev_index,&index, sizeof(int), cudaMemcpyHostToDevice);
-	    for(int i = 0; i < width; i++){
-	    	GPU_FromCoordToNodeStruct<<<1, height>>>(dev_matrix, dev_mat, width, height, i, dev_path, dev_index);
-	    }
-	    cudaDeviceSynchronize();
-	    //get back all the data
-	    cudaMemcpy(matrix, dev_matrix, sizeof(NodeStruct) * width * height, cudaMemcpyDeviceToHost);
-	    cudaMemcpy(startPath, dev_path, sizeof(int) * 2, cudaMemcpyDeviceToHost);
-	    cudaMemcpy(endPath, dev_path + 2, sizeof(int) * 2, cudaMemcpyDeviceToHost);
+	NodeStruct *matrix = new NodeStruct[width * height];
+	int * dev_mat;
+	cudaMalloc(&dev_mat, sizeof(int) * width * height);
+	//cuda variable
+	NodeStruct *dev_matrix;
+	int *dev_path, *dev_index, index = 0;
+	//memory allocation
+	cudaMalloc(&dev_matrix, sizeof(NodeStruct) * width * height);
+	cudaMalloc(&dev_path, sizeof(int) * 4);
+	cudaMalloc(&dev_index, sizeof(int));
+	//copy data on GPU
+	cudaMemcpy(dev_mat, mat, sizeof(int) * width * height, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_index,&index, sizeof(int), cudaMemcpyHostToDevice);
+	for(int i = 0; i < width; i++){
+		GPU_FromCoordToNodeStruct<<<1, height>>>(dev_matrix, dev_mat, width, height, i, dev_path, dev_index);
+	}
+	cudaDeviceSynchronize();
+	//get back all the data
+	cudaMemcpy(matrix, dev_matrix, sizeof(NodeStruct) * width * height, cudaMemcpyDeviceToHost);
+	cudaMemcpy(startPath, dev_path, sizeof(int) * 2, cudaMemcpyDeviceToHost);
+	cudaMemcpy(endPath, dev_path + 2, sizeof(int) * 2, cudaMemcpyDeviceToHost);
 //	    PrintNodeMaze(matrix, width, height);
 //	    printf("start: %d,%d  end: %d,%d",startPath[0],startPath[1],endPath[0],endPath[1]);
-	    // construct a matrix to keep track of visited cells
-	    bool visited[width * height];
+	// construct a matrix to keep track of visited cells
+	bool *visited = new bool[width * height];
 
-	    bool *dev_visited;
-	    cudaMalloc(&dev_visited, sizeof(bool) * width * height);
-	    // initially all cells are unvisited
-	   setupVisited<<<width, height>>>(dev_visited, width, height);
-	   cudaDeviceSynchronize();
-	   cudaMemcpy(visited, dev_visited, sizeof(bool) * width * height, cudaMemcpyDeviceToHost);
-	    // create an empty queue
-	    queue<NodeStruct> q;
+	bool *dev_visited;
+	cudaMalloc(&dev_visited, sizeof(bool) * width * height);
+	// initially all cells are unvisited
+   setupVisited<<<width, height>>>(dev_visited, width, height);
+   cudaDeviceSynchronize();
+   cudaMemcpy(visited, dev_visited, sizeof(bool) * width * height, cudaMemcpyDeviceToHost);
+	// create an empty queue
+	queue<NodeStruct> q;
 
-	    // mark source cell as visited and enqueue the source NodeStruct
-	    visited[startPath[0] * width + startPath[1]] = true;
-	    q.push(matrix[startPath[0] * width + startPath[1]]);
+	// mark source cell as visited and enqueue the source NodeStruct
+	visited[startPath[0] * width + startPath[1]] = true;
+	q.push(matrix[startPath[0] * width + startPath[1]]);
 
-	    // run till queue is not empty
-	    while (!q.empty()) {
-	        // pop front NodeStruct from queue and process it
-	        NodeStruct NodeStruct = q.front();
-	        q.pop();
+	// run till queue is not empty
+	while (!q.empty()) {
+		// pop front NodeStruct from queue and process it
+		NodeStruct NodeStruct = q.front();
+		q.pop();
 
-	        // (i, j) represents current cell and dist stores its
-	        // minimum distance from the source
-	        int i = NodeStruct.x, j = NodeStruct.y;
+		// (i, j) represents current cell and dist stores its
+		// minimum distance from the source
+		int i = NodeStruct.x, j = NodeStruct.y;
 
-	        // if destination is found, update min_dist and stop
+		// if destination is found, update min_dist and stop
 //	        cout << "i: " << i <<", j: " << j << endl;
 //	        cout << "endPath: " << endPath[0] << "," << endPath[1] << endl;
-	        if (i == endPath[0] && j == endPath[1]) {
-	            GPU_ReachPath(matrix, dev_matrix, width, height);
-	            int *dev_start,*dev_end;
-	            cudaMalloc(&dev_start,sizeof(int)*2);
-	            cudaMalloc(&dev_end,sizeof(int)*2);
-	            cudaMemcpy(dev_start,startPath,sizeof(int)*2,cudaMemcpyHostToDevice);
-	            cudaMemcpy(dev_end,endPath,sizeof(int)*2,cudaMemcpyHostToDevice);
-	            cudaMemcpy(dev_matrix,matrix,sizeof(NodeStruct)*width*height, cudaMemcpyHostToDevice);
+		if (i == endPath[0] && j == endPath[1]) {
+			GPU_ReachPath(matrix, dev_matrix, width, height);
+			int *dev_start,*dev_end;
+			cudaMalloc(&dev_start,sizeof(int)*2);
+			cudaMalloc(&dev_end,sizeof(int)*2);
+			cudaMemcpy(dev_start,startPath,sizeof(int)*2,cudaMemcpyHostToDevice);
+			cudaMemcpy(dev_end,endPath,sizeof(int)*2,cudaMemcpyHostToDevice);
+			cudaMemcpy(dev_matrix,matrix,sizeof(NodeStruct)*width*height, cudaMemcpyHostToDevice);
 
-	            GPU_PrintNodeMaze<<<height,width>>>(dev_matrix, dev_mat, dev_start, dev_end, width, height);
-	            cudaMemcpy(mat,dev_mat,sizeof(int)*width*height,cudaMemcpyDeviceToHost);
-	            break;
-	        }
+			GPU_PrintNodeMaze<<<height,width>>>(dev_matrix, dev_mat, dev_start, dev_end, width, height);
+			cudaMemcpy(mat,dev_mat,sizeof(int)*width*height,cudaMemcpyDeviceToHost);
+			break;
+		}
 
-	        // check for all 4 possible movements from current cell
-	        // and enqueue each valid movement into the queue
-	        for (int k = 0; k < 4; k++) {
-	            // check if it is possible to go to position
-	            // (i + row[k], j + col[k]) from current position
-	            if (isValid(matrix, visited, i + row[k], j + col[k], width, height)) {
-	                // mark next cell as visited and enqueue it
-	                visited[(i + row[k]) * width + (j + col[k])] = true;
-	                q.push({ i + row[k], j + col[k], &matrix[i * width + j], matrix[i * width + j].isNotWall });
-	                matrix[(i + row[k]) * width + (j + col[k])].parent = &matrix[i * width + j];
+		// check for all 4 possible movements from current cell
+		// and enqueue each valid movement into the queue
+		for (int k = 0; k < 4; k++) {
+			// check if it is possible to go to position
+			// (i + row[k], j + col[k]) from current position
+			if (isValid(matrix, visited, i + row[k], j + col[k], width, height)) {
+				// mark next cell as visited and enqueue it
+				visited[(i + row[k]) * width + (j + col[k])] = true;
+				q.push({ i + row[k], j + col[k], &matrix[i * width + j], matrix[i * width + j].isNotWall });
+				matrix[(i + row[k]) * width + (j + col[k])].parent = &matrix[i * width + j];
 //	                cout << "parent setted: " << matrix[(i + row[k]) * width + (j + col[k])].parent << endl;
-	            }
-	        }
-	    }
+			}
+		}
+	}
+	delete matrix;
+	delete visited;
 }
 

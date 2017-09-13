@@ -67,8 +67,8 @@ void update_maze_with_solution(int *maze, int width, int height, int start,
 }
 
 //function of the algorithms
-void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width,
-		int height) {
+void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width, int height) {
+
 	setupDirections(directions, width);
 	//counter of done moves
 	int count_moves = 0;
@@ -77,9 +77,9 @@ void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width,
 	//max possible moves
 	int maxMoves = (width * height) + 2;
 	//path that i'm following
-	int moves[maxMoves];
+	int *moves = new int[maxMoves];
 	//all cell visited
-	int already_seen[width * height];
+	int *already_seen = new int[width * height];
 	//I have found the exit?
 	bool done = false;
 	moves[count_moves++] = start;
@@ -150,6 +150,8 @@ void CPU_wall_follower_maze_solver(int *maze, int start, int end, int width,
 		//no solution
 		cout << "solution not found" << endl;
 	}
+	delete moves;
+	delete already_seen;
 }
 
 __global__ void GPU_array_contains(int *maze, int move, int size,
@@ -171,8 +173,7 @@ __global__ void GPU_fill_solution(int *maze, int *solution, int solution_size) {
 	}
 }
 
-void GPU_update_maze_with_solution(int *maze, int *dev_maze, int width,
-		int height, int start, int end, int *solution, int solution_size) {
+void GPU_update_maze_with_solution(int *maze, int *dev_maze, int width, int height, int start, int end, int *solution, int solution_size) {
 	//set all to 0
 	int *dev_solution;
 	GPU_FillWall<<<height, width>>>(dev_maze, width, width*height);
@@ -317,7 +318,6 @@ void GPU_wall_follower_maze_solver(int *maze, int start, int end, int width,int 
 		//no solution
 		cout << "solution not found" << endl;
 	}
-	free(moves);
-	free(already_seen);
-	cudaDeviceReset();
+	delete moves;
+	delete already_seen;
 }

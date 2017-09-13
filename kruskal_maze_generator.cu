@@ -203,9 +203,10 @@ void CPU_kruskal_maze_generator(int *maze, int width, int height) {
   Kruskal(all_edges, &mst_edges, newWidth, newHeight);
   ConvertToPaintedPoint(mst_edges, &points, newWidth);
   int size = ((newWidth * 4) + 1);
-  int largeMaze[size * size];
+  int *largeMaze = new int[size * size];
   GenerateMaze(points, largeMaze, newWidth, newHeight, size);
   FromMazeToGrid(largeMaze, maze, width, size);
+  delete largeMaze;
 }
 
 __device__ int GPU_Pos2Idx (int row, int column, int width) {
@@ -380,8 +381,8 @@ void GPU_kruskal_maze_generator(int *maze, int width, int height) {
 	srand(time(0));
 	int newWidth = (width -1)/2;
 	int newHeight = (height -1)/2;
-	pair<int, int> all_edges[newWidth * newHeight * 2];
-	pair<int, int> mst_edges[newWidth * newHeight];
+	pair<int, int> *all_edges = new pair<int,int>[newWidth * newHeight * 2];
+	pair<int, int> *mst_edges = new pair<int,int>[newWidth * newHeight];
 
 	// initialize all edges matrix
 	pair<int, int> *dev_edges;
@@ -402,7 +403,7 @@ void GPU_kruskal_maze_generator(int *maze, int width, int height) {
 	cudaMemcpy(dev_mst, mst_edges, sizeof(pair<int, int>) * count, cudaMemcpyHostToDevice);
 
 	// initialize points matrix
-	pair<int, int> points[count];
+	pair<int, int> *points = new pair<int,int>[count];
 	pair<int, int> *dev_points;
 	cudaMalloc(&dev_points, sizeof(pair<int, int>) * count);
 
@@ -422,7 +423,12 @@ void GPU_kruskal_maze_generator(int *maze, int width, int height) {
 	sort(&points[0], &points[count]);
 
 	int size = ((newWidth * 4) + 1);
-	int largeMaze[size * size];
+	int *largeMaze = new int[size * size];
 	GPU_GenerateMaze(points, largeMaze, newWidth, newHeight, size, count);
 	FromMazeToGrid(largeMaze, maze, width, size);
+
+	delete all_edges;
+	delete mst_edges;
+	delete points;
+	delete largeMaze;
 }

@@ -64,20 +64,19 @@ void reduce_maze(int *maze, int *newMaze, int newWidth, int height){
 	for(int i = 0; i < height; i++){
 		newMaze[i*newWidth] = WALL;
 		for(int j = 1; j < width; j++){
-			int val = maze[i*width+(j*2)];
-			int next_val = maze[i*width+(j*2) + 1];
-//			if(val == OBJECTIVE){
-//				newMaze[i*newWidth + j] = OBJECTIVE;
-//			}
-			if(i == 0 || j == 0 || i == height-1 || j == newWidth -1){
-				newMaze[i*newWidth + j] = WALL;
-			}
-			else{
-				if(val == WALL && next_val == WALL){
+			if(i*newWidth + j < newWidth * height){
+				int val = maze[i*width+(j*2)];
+				int next_val = maze[i*width+(j*2) + 1];
+				if(i == 0 || j == 0 || i == height-1 || j == newWidth -1){
 					newMaze[i*newWidth + j] = WALL;
 				}
 				else{
-					newMaze[i*newWidth + j] = OPEN;
+					if(val == WALL && next_val == WALL){
+						newMaze[i*newWidth + j] = WALL;
+					}
+					else{
+						newMaze[i*newWidth + j] = OPEN;
+					}
 				}
 			}
 		}
@@ -86,7 +85,7 @@ void reduce_maze(int *maze, int *newMaze, int newWidth, int height){
 
 void add_objective(int *maze, int width, int height){
 	vector <int> stack_start, stack_end;
-	for(int j = 0; j < width; j++){
+	for(int j = 1; j < width - 1; j++){
 		if(maze[j+width] == OPEN){
 			stack_start.push_back(j);
 		}
@@ -94,6 +93,14 @@ void add_objective(int *maze, int width, int height){
 			stack_end.push_back(width*(height-1)+j);
 		}
 	}
+//	for(int i = 1; i < height; i++){
+//		if(maze[i*width + 1] == OPEN){
+//			stack_start.push_back(i*width);
+//		}
+//		if(maze[i*width + width - 2] == OPEN){
+//			stack_end.push_back(i*width + width -1);
+//		}
+//	}
 	int start = rand() % stack_start.size();
 	start = stack_start[start];
 	maze[start] = OBJECTIVE;
@@ -179,15 +186,19 @@ void CPU_division_maze_generator(int *maze, int width, int height){
 	width --;
 	//set random seed
 	srand(time(NULL));
-	int first_maze[width * height];
-	int second_maze[(width * 2 + 1) * (height+1)];
+	int *first_maze = new int[width * height];
+	int *second_maze = new int[(width * 2 + 1) * (height+1)];
 	//first, set everything to OPEN
 	FillWall(first_maze, width * height);
 	//start with the algorithm
 	recursive_divide(first_maze, 0, 0, width, height, width, choose_orientation(width, height));
+//	PrintMaze(first_maze,width,height);
 	convert_maze(first_maze,second_maze,width,height);
 	reduce_maze(second_maze,maze,width,height);
 	add_objective(maze,width+1,height);
+
+	delete first_maze;
+	delete second_maze;
 }
 
 __device__ int device_choose_orientation (int width, int height){
@@ -257,6 +268,8 @@ class StackElement {
 __global__ void GPU_iterator_divide(int *maze, int real_width, StackElement *stack, int size_stack, StackElement *new_stack, int *size_new_stack, int *recursive_calls){
 	//define parameters for original algorithm
 	int x, y, width, height, orientation, rand;
+	int wX, wY,pX,pY,dX,dY,lenght,dir;
+	int nX, nY, w, h;
 	//get parameters values
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	//if it's a valid index
@@ -266,8 +279,6 @@ __global__ void GPU_iterator_divide(int *maze, int real_width, StackElement *sta
 		//get data from the stack
 		stack[index].copyAttributes(x,y,width,height,orientation,rand);
 		//start algorithm
-		int wX, wY,pX,pY,dX,dY,lenght,dir;
-		int nX, nY, w, h;
 		//check if I don't have to make this iteration
 		if(width < MAZE_RESOLUTION || height < MAZE_RESOLUTION){
 			new_stack[2 * index] = StackElement(NULL);
@@ -340,6 +351,7 @@ __global__ void GPU_iterator_divide(int *maze, int real_width, StackElement *sta
 		new_stack[index * 2 + 1] = StackElement(nX, nY, w, h, NULL);
 		//increment counter of calls
 		atomicAdd(recursive_calls, 2);
+		atomicAdd(size_new_stack,2);
 	}
 }
 
@@ -351,11 +363,9 @@ void GPU_recursive_divide(int *maze,int width, int height){
 	int *dev_recursive;
 	int default_size = 0;
 	//create stack
-	int stack_dimension = width * height * 100;
-	StackElement *stack = new StackElement[stack_dimension];
+	StackElement *stack = new StackElement;
 	//stack for device
 	StackElement *dev_stack, *dev_temp_stack;
-	cudaMalloc(&dev_temp_stack, sizeof(StackElement) * stack_dimension);
 	cudaMalloc(&dev_size_temp, sizeof(int));
 	cudaMalloc(&dev_recursive, sizeof(int));
 
@@ -368,54 +378,63 @@ void GPU_recursive_divide(int *maze,int width, int height){
 		for(int i = 0; i < size_stack; i++){
 			stack[i].random_value = rand();
 		}
-		int n_blocks = (size_stack / 32 ) + 1;
 		//allocate and copy device stack
 		cudaMalloc(&dev_stack, sizeof(StackElement) * size_stack);
 		cudaMemcpy(dev_stack, stack, sizeof(StackElement) * size_stack, cudaMemcpyHostToDevice);
+		cudaMalloc(&dev_temp_stack, sizeof(StackElement) * size_stack * 2);
 		//setup size of the new stack and recursive calls
 		cudaMemcpy(dev_size_temp, &default_size, sizeof(int), cudaMemcpyHostToDevice);
 		cudaMemcpy(dev_recursive, &default_size, sizeof(int), cudaMemcpyHostToDevice);
 		//call the real algorithm
 //		cout << "calling gpu ... ";
-		GPU_iterator_divide<<<n_blocks, 32>>>(maze, width, dev_stack, size_stack, dev_temp_stack, dev_size_temp, dev_recursive);
+		GPU_iterator_divide<<<1, size_stack>>>(maze, width, dev_stack, size_stack, dev_temp_stack, dev_size_temp, dev_recursive);
 //		cout << "end!" << endl;
 		//wait that every thread finishes
 		cudaDeviceSynchronize();
-		//copy stack size and stack to host
-		cudaMemcpy(&size_stack, dev_size_temp, sizeof(int), cudaMemcpyDeviceToHost);
-		cudaMemcpy(stack, dev_temp_stack, sizeof(StackElement) * size_stack, cudaMemcpyDeviceToHost);
-		cudaMemcpy(&recursive_calls, dev_recursive, sizeof(int), cudaMemcpyDeviceToHost);
-		//free dev_stack
-//		cudaFree(dev_stack);
 		//check if I have finished
-		if(recursive_calls == 0) again = false;
+		cudaMemcpy(&recursive_calls, dev_recursive, sizeof(int), cudaMemcpyDeviceToHost);
+		if(recursive_calls == 0){
+			again = false;
+		}else{
+			//copy stack size and stack to host
+			cudaMemcpy(&size_stack, dev_size_temp, sizeof(int), cudaMemcpyDeviceToHost);
+			delete stack;
+			stack = new StackElement[size_stack];
+			cudaMemcpy(stack, dev_temp_stack, sizeof(StackElement) * size_stack, cudaMemcpyDeviceToHost);
+			//free dev_stack
+			cudaFree(dev_stack);
+			cudaFree(dev_temp_stack);
+		}
 	}
 	free(stack);
 }
 
 __global__ void GPU_convert_maze(int *maze, int *newMaze, int width, int height, int newWidth, int newHeight, int sud, int est){
+	printf("dioporco\n");
 	int i = blockIdx.x;
 	int j = threadIdx.x;
+	bool bottom, south, south2, east;bottom = (i+1 >= height);
+	south = (maze[i*width+j] & sud) != 0 || bottom;
+	south2 = j+1 < width && ((maze[width*i + j + 1] & sud) != 0 || bottom);
+	east = (maze[i*width+j] & est) != 0 || j+1 > width;
+	__syncthreads();
 	if(i == 0 || j == 0){
 		newMaze[i*newWidth + j] = WALL;
+		return;
+	}
+//	printf("bottom:%d,south:%d,south2:%d,east:%d\n",bottom,south,south2,east);
+	if(south){
+		newMaze[i*newWidth+(j*2) - 1] = WALL;
 	}else{
-		bool bottom, south, south2, east;bottom = (i+1 >= height);
-		south = (maze[i*width+j] & sud) != 0 || bottom;
-		south2 = j+1 < width && ((maze[width*i + j + 1] & sud) != 0 || bottom);
-		east = (maze[i*width+j] & est) != 0 || j+1 > width;
-		if(south){
-			newMaze[i*newWidth+(j*2) - 1] = WALL;
-		}else{
-			newMaze[i*newWidth+(j*2) - 1] = OPEN;
-		}
-		if(east){
+		newMaze[i*newWidth+(j*2) - 1] = OPEN;
+	}
+	if(east){
+		newMaze[i*newWidth+(j*2)] = WALL;
+	}else{
+		if(south && south2){
 			newMaze[i*newWidth+(j*2)] = WALL;
 		}else{
-			if(south && south2){
-				newMaze[i*newWidth+(j*2)] = WALL;
-			}else{
-				newMaze[i*newWidth+(j*2)] = OPEN;
-			}
+			newMaze[i*newWidth+(j*2)] = OPEN;
 		}
 	}
 }
@@ -424,7 +443,7 @@ __global__ void GPU_reduce_maze(int *maze, int *newMaze, int newWidth, int width
 	int i = blockIdx.x;
 	int j = threadIdx.x;
 	if(j==0) newMaze[i*newWidth + j] = WALL;
-	else{
+	else if(i*newWidth + j < newWidth * height){
 		int val = maze[i*width+(j*2)];
 		int next_val = maze[i*width+(j*2) + 1];
 		if(i == 0 || j == 0 || i == height-1 || j == newWidth -1){
@@ -454,10 +473,19 @@ void GPU_division_maze_generator(int *maze, int width, int height){
 	cudaMalloc(&dev_second_maze, sizeof(int) * (width * 2 + 1) * (height + 1));
 	//first, set everything to WALL
 	GPU_FillWall<<<height, width>>>(dev_first_maze, width, width * height);
+	cudaDeviceSynchronize();
 	//start with the algorithm
 	GPU_recursive_divide(dev_first_maze, width, height);
+//	int *temp = new int[(width * height)];
+//	cudaMemcpy(temp,dev_second_maze, sizeof(int) * (width * height), cudaMemcpyDeviceToHost);
+//	PrintMaze(temp,width,height);
 	GPU_convert_maze<<<height + 1,width * 2 + 1>>>(dev_first_maze, dev_second_maze, width, height, width * 2 + 1, height + 1, SUD, EST);
+	cudaDeviceSynchronize();
+//	int *temp = new int[(width * 2 + 1) * (height + 1)];
+//	cudaMemcpy(temp,dev_second_maze, sizeof(int) * (width * 2 + 1) * (height + 1), cudaMemcpyDeviceToHost);
+//	PrintMaze(temp,width * 2 + 1,height + 1);
 	GPU_reduce_maze<<<height,width + 1>>>(dev_second_maze, dev_maze, width + 1, (width - 1)*2+1, height);
+	cudaDeviceSynchronize();
 	cudaMemcpy(maze, dev_maze, sizeof(int) * (width+1) * height, cudaMemcpyDeviceToHost);
 	add_objective(maze,width+1,height);
 }

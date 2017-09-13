@@ -107,13 +107,15 @@ int find_path(char *maze, int x, int y, int width, int height) {
 }
 
 void CPU_recursive_maze_solver(int *mazeInt, int width, int height) {
-    char mazeChar[width * height];
+    char *mazeChar = new char[width * height];
 
     FromCoordToChar(mazeInt, mazeChar, width, height);
 
     find_path(mazeChar, pathStart[0], pathStart[1], width, height);
 
     FromCharToCoord(mazeInt, mazeChar, width, height);
+
+    delete mazeChar;
 }
 
 __global__ void GPU_FromCoordToChar(int *mazeInt, char *maze, int *indexes) {

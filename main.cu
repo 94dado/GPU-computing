@@ -23,11 +23,13 @@ void dfs(int side, int *maze1, int *maze2) {
 	double start = seconds();
 	CPU_dfs_maze_generator(maze1, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side-1,side-1);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "DFS MAZE GENERATOR WITH GPU" << endl;
 	start = seconds();
 	GPU_dfs_maze_generator(maze2,side,side);
 	diff = seconds()-start;
+//	PrintMaze(maze2,side-1,side-1);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -38,11 +40,13 @@ void cellular(int side, int *maze1, int *maze2) {
 	double start = seconds();
 	CPU_cellular_automata_solver(maze1, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "CELLULAR AUTOMATA MAZE SOLVER WITH GPU" << endl;
 	start = seconds();
 	GPU_cellular_automata_solver(maze2,side,side);
 	diff = seconds()-start;
+//	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -53,11 +57,13 @@ void backtracker(int side, int *maze1, int *maze2) {
 	double start = seconds();
 	CPU_backtracker_maze_generator(maze1, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "BACKTRACKER MAZE GENERATOR WITH GPU" << endl;
 	start = seconds();
 	GPU_backtracker_maze_generator(maze2,side,side);
 	diff = seconds()-start;
+//	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -68,11 +74,13 @@ void bfs(int side, int *maze1, int *maze2) {
 	double start = seconds();
 	CPU_bfs_maze_solver(maze1, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "BFS MAZE SOLVER WITH GPU" << endl;
 	start = seconds();
 	GPU_bfs_maze_solver(maze2,side,side);
 	diff = seconds()-start;
+	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -83,11 +91,13 @@ void division(int side, int *maze1, int *maze2) {
 	double start = seconds();
 	CPU_division_maze_generator(maze1, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "DIVISION MAZE GENERATOR WITH GPU" << endl;
 	start = seconds();
 	GPU_division_maze_generator(maze2,side,side);
 	diff = seconds()-start;
+//	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -98,11 +108,13 @@ void recursive(int side, int *maze1, int *maze2) {
 	double start = seconds();
 	CPU_recursive_maze_solver(maze1, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "RECURSIVE MAZE SOLVER WITH GPU" << endl;
 	start = seconds();
 	GPU_recursive_maze_solver(maze2,side,side);
 	diff = seconds()-start;
+//	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -113,11 +125,13 @@ void kruskal(int side, int *maze1, int *maze2) { //solo dispari
 	double start = seconds();
 	CPU_kruskal_maze_generator(maze1, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "KRUSKAL MAZE GENERATOR WITH GPU" << endl;
 	start = seconds();
 	GPU_kruskal_maze_generator(maze2,side,side);
 	diff = seconds()-start;
+//	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -128,48 +142,47 @@ void wall_follower(int side, int startP, int endP, int *maze1, int *maze2) {
 	double start = seconds();
 	CPU_wall_follower_maze_solver(maze1, startP, endP, side, side);
 	diff = seconds()-start;
+//	PrintMaze(maze1,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cout << endl << "WALL FOLLOWER MAZE SOLVER WITH GPU" << endl;
 	start = seconds();
 	GPU_wall_follower_maze_solver(maze2,startP, endP, side,side);
 	diff = seconds()-start;
+//	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
 
 int main(){
-	int side = 1;
-//	for (int i = 0; i < NUMBER_OF_TEST; i++) {
-		// setted size of the matrix
-		side *= 10;
-		int dim = side * side;
-		cout << endl << "DIMENSIONE TEST " << dim << endl;
-		int *maze1 = new int[dim];
-		int *maze2 = new int[dim];
+	int side = 5000;
+	// setted size of the matrix
+	int dim = side * side;
+	cout << endl << "DIMENSIONE TEST " << dim << endl;
+	int *maze1 = new int[dim];
+	int *maze2 = new int[dim];
 
-		//DFS
-		dfs(side, maze1, maze2);
-		// Cellular automata
-		cellular(side-1, maze1,maze2);
+//	//DFS
+//	dfs(side, maze1, maze2);
+//	// Cellular automata
+//	cellular(side-1, maze1,maze2);
+//
+//	// Backtracker
+//	backtracker(side, maze1, maze2);
+//	// Wall follower
+//	wall_follower(side, 1, dim-2, maze1,maze2);
 
-		// Backtracker
-		backtracker(side, maze1, maze2);
-		// Wall follower
-		wall_follower(side, 1, dim-2, maze1,maze2);
+	// Division
+	division(side, maze1, maze2);
+	// BFS
+	bfs(side, maze1,maze2);
 
-		// Division
-		division(side, maze1, maze2);
-		// BFS
-		bfs(side, maze1,maze2);
+//	// Kruskal
+//	kruskal(side-1, maze1, maze2);
+//	// Recursive
+//	recursive(side-1, maze1,maze2);
 
-		// Kruskal
-		kruskal(side-1, maze1, maze2);
-		// Recursive
-		recursive(side-1, maze1,maze2);
-
-//	}
-		free(maze1);
-		free(maze2);
+	delete maze1;
+	delete maze2;
 	return 0;
 }
 

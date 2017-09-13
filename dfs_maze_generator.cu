@@ -416,7 +416,7 @@ void GPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	if (width %2 == 0) width--;
 	if (height%2 == 0) height--;
 	int mazeSize[] = {width, height};
-	bool maze[height * width * 2];
+	bool *maze = new bool[height * width * 2];
 	bool *dev_maze;
 	int *dev_coordMaze;
 
@@ -434,6 +434,8 @@ void GPU_dfs_maze_generator(int *coordMaze, int width, int height){
 	cudaMemcpy(dev_maze, maze, sizeof(bool) * 2 * width * height, cudaMemcpyHostToDevice);
 	GPU_DFSToCoord(dev_maze, mazeSize, dev_coordMaze);
 	cudaMemcpy(coordMaze, dev_coordMaze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
+
+	delete maze;
 }
 
 vector< vector< vector< bool>>> arrayToVec( bool *maze, int width, int height){
