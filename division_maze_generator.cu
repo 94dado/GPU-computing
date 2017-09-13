@@ -265,13 +265,13 @@ class StackElement {
 };
 
 //function that actually execute the code of the algorithm on the gpu
-__global__ void GPU_iterator_divide(int *maze, int real_width, StackElement *stack, int size_stack, StackElement *new_stack, int *size_new_stack, int *recursive_calls){
+__global__ void GPU_iterator_divide(int *maze, int real_width, StackElement *stack, int size_stack, StackElement *new_stack, int *size_new_stack, int *recursive_calls, int offset){
 	//define parameters for original algorithm
 	int x, y, width, height, orientation, rand;
 	int wX, wY,pX,pY,dX,dY,lenght,dir;
 	int nX, nY, w, h;
 	//get parameters values
-	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	int index = blockIdx.x * blockDim.x + offset + threadIdx.x;
 	//if it's a valid index
 	if(index < size_stack){
 		//check if I have data
@@ -387,8 +387,13 @@ void GPU_recursive_divide(int *maze,int width, int height){
 		cudaMemcpy(dev_recursive, &default_size, sizeof(int), cudaMemcpyHostToDevice);
 		//call the real algorithm
 //		cout << "calling gpu ... ";
-		GPU_iterator_divide<<<1, size_stack>>>(maze, width, dev_stack, size_stack, dev_temp_stack, dev_size_temp, dev_recursive);
-//		cout << "end!" << endl;
+		int offset = 0;
+		if(recursive_calls / MAX_THREAD != 0){
+			cout << recursive_calls/MAX_THREAD << "," << MAX_THREAD << endl;
+			GPU_iterator_divide<<<recursive_calls / MAX_THREAD, MAX_THREAD>>>(maze, width, dev_stack, size_stack, dev_temp_stack, dev_size_temp, dev_recursive, offset);
+			cudaCheckError();
+		}
+		GPU_iterator_divide<<<1, recursive_calls % MAX_THREAD>>>(maze, width, dev_stack, size_stack, dev_temp_stack, dev_size_temp, dev_recursive, (size_stack/MAX_THREAD) * MAX_THREAD);
 		//wait that every thread finishes
 		cudaDeviceSynchronize();
 		//check if I have finished
@@ -406,18 +411,16 @@ void GPU_recursive_divide(int *maze,int width, int height){
 			cudaFree(dev_temp_stack);
 		}
 	}
-	free(stack);
+	delete stack;
 }
 
-__global__ void GPU_convert_maze(int *maze, int *newMaze, int width, int height, int newWidth, int newHeight, int sud, int est){
-	printf("dioporco\n");
+__global__ void GPU_convert_maze(int *maze, int *newMaze, int width, int height, int newWidth, int newHeight, int sud, int est, int offset){
 	int i = blockIdx.x;
-	int j = threadIdx.x;
+	int j = offset + threadIdx.x;
 	bool bottom, south, south2, east;bottom = (i+1 >= height);
 	south = (maze[i*width+j] & sud) != 0 || bottom;
 	south2 = j+1 < width && ((maze[width*i + j + 1] & sud) != 0 || bottom);
 	east = (maze[i*width+j] & est) != 0 || j+1 > width;
-	__syncthreads();
 	if(i == 0 || j == 0){
 		newMaze[i*newWidth + j] = WALL;
 		return;
@@ -439,9 +442,9 @@ __global__ void GPU_convert_maze(int *maze, int *newMaze, int width, int height,
 	}
 }
 
-__global__ void GPU_reduce_maze(int *maze, int *newMaze, int newWidth, int width, int height){
+__global__ void GPU_reduce_maze(int *maze, int *newMaze, int newWidth, int width, int height, int offset){
 	int i = blockIdx.x;
-	int j = threadIdx.x;
+	int j = offset + threadIdx.x;
 	if(j==0) newMaze[i*newWidth + j] = WALL;
 	else if(i*newWidth + j < newWidth * height){
 		int val = maze[i*width+(j*2)];
@@ -472,19 +475,37 @@ void GPU_division_maze_generator(int *maze, int width, int height){
 	cudaMalloc(&dev_first_maze, sizeof(int) * width * height);
 	cudaMalloc(&dev_second_maze, sizeof(int) * (width * 2 + 1) * (height + 1));
 	//first, set everything to WALL
-	GPU_FillWall<<<height, width>>>(dev_first_maze, width, width * height);
+	int max_rec = width / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_FillWall<<<height, MAX_THREAD>>>(dev_first_maze, width, width * height, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+	GPU_FillWall<<<height, width % MAX_THREAD>>>(dev_first_maze, width, width * height, offset);
 	cudaDeviceSynchronize();
 	//start with the algorithm
 	GPU_recursive_divide(dev_first_maze, width, height);
 //	int *temp = new int[(width * height)];
 //	cudaMemcpy(temp,dev_second_maze, sizeof(int) * (width * height), cudaMemcpyDeviceToHost);
 //	PrintMaze(temp,width,height);
-	GPU_convert_maze<<<height + 1,width * 2 + 1>>>(dev_first_maze, dev_second_maze, width, height, width * 2 + 1, height + 1, SUD, EST);
+	max_rec = (width * 2 + 1) / MAX_THREAD;
+	offset = 0;
+	for(int i=0; i < max_rec; i++){
+		GPU_convert_maze<<<height + 1, MAX_THREAD>>>(dev_first_maze, dev_second_maze, width, height, width * 2 + 1, height + 1, SUD, EST, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+	GPU_convert_maze<<<height + 1,(width * 2 + 1) % MAX_THREAD>>>(dev_first_maze, dev_second_maze, width, height, width * 2 + 1, height + 1, SUD, EST, offset);
 	cudaDeviceSynchronize();
 //	int *temp = new int[(width * 2 + 1) * (height + 1)];
 //	cudaMemcpy(temp,dev_second_maze, sizeof(int) * (width * 2 + 1) * (height + 1), cudaMemcpyDeviceToHost);
 //	PrintMaze(temp,width * 2 + 1,height + 1);
-	GPU_reduce_maze<<<height,width + 1>>>(dev_second_maze, dev_maze, width + 1, (width - 1)*2+1, height);
+	max_rec = (width + 1) / MAX_THREAD;
+	offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_reduce_maze<<<height,MAX_THREAD>>>(dev_second_maze, dev_maze, width + 1, (width - 1)*2+1, height, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+	GPU_reduce_maze<<<height,(width + 1) % MAX_THREAD>>>(dev_second_maze, dev_maze, width + 1, (width - 1)*2+1, height, offset);
 	cudaDeviceSynchronize();
 	cudaMemcpy(maze, dev_maze, sizeof(int) * (width+1) * height, cudaMemcpyDeviceToHost);
 	add_objective(maze,width+1,height);

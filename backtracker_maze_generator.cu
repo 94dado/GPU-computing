@@ -63,8 +63,8 @@ void CPU_backtracker_maze_generator(int *maze, int width, int height) {
    maze[(height - 1) * width + (width - 2)] = OBJECTIVE;
 }
 
-__global__ void GPU_init_maze(int *maze, int length, int row_length){
-	int idx = blockIdx.x * row_length + threadIdx.x;
+__global__ void GPU_init_maze(int *maze, int length, int row_length, int offset){
+	int idx = blockIdx.x * row_length + offset + threadIdx.x;
 	maze[idx] = WALL;
 }
 
@@ -114,7 +114,13 @@ void GPU_backtracker_maze_generator(int *maze, int width, int height){
 	//initialize the maze
 	cudaMalloc(&dev_maze, sizeof(int) * length);
 	cudaMemcpy(dev_maze, maze, sizeof(int) * length, cudaMemcpyHostToDevice);
-	GPU_init_maze<<<height, width>>>(dev_maze, width* height, width);
+	int max_rec = width / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_init_maze<<<height, MAX_THREAD>>>(dev_maze, width* height, width, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+	GPU_init_maze<<<height, width % MAX_THREAD>>>(dev_maze, width* height, width, offset);
 	cudaDeviceSynchronize();
 	cudaMemcpy(maze,dev_maze, sizeof(int) * length, cudaMemcpyDeviceToHost);
 

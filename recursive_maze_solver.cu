@@ -118,8 +118,8 @@ void CPU_recursive_maze_solver(int *mazeInt, int width, int height) {
     delete mazeChar;
 }
 
-__global__ void GPU_FromCoordToChar(int *mazeInt, char *maze, int *indexes) {
-    int index = blockDim.x * blockIdx.x + threadIdx.x;
+__global__ void GPU_FromCoordToChar(int *mazeInt, char *maze, int *indexes, int offset) {
+    int index = blockDim.x * blockIdx.x + offset + threadIdx.x;
 	// start and end
 	if (mazeInt[index] == OBJECTIVE) {
 		indexes[0] = blockIdx.x;;
@@ -136,8 +136,8 @@ __global__ void GPU_FromCoordToChar(int *mazeInt, char *maze, int *indexes) {
 	}
 }
 
-__global__ void GPU_FromCharToCoord(int *mazeInt, char *maze, int *pathStart) {
-	int index = blockDim.x * blockIdx.x + threadIdx.x;
+__global__ void GPU_FromCharToCoord(int *mazeInt, char *maze, int *pathStart, int offset) {
+	int index = blockDim.x * blockIdx.x + offset + threadIdx.x;
 	// start and end
 	if ((pathStart[0] == blockIdx.x && pathStart[1] == threadIdx.x) || maze[index] == 'G') {
 		mazeInt[index] = OBJECTIVE;
@@ -152,13 +152,13 @@ __global__ void GPU_FromCharToCoord(int *mazeInt, char *maze, int *pathStart) {
 	}
 }
 
-__global__ void setupArray(int *array){
-	int index = blockDim.x * blockIdx.x + threadIdx.x;
+__global__ void setupArray(int *array, int offset){
+	int index = blockDim.x * blockIdx.x + offset + threadIdx.x;
 	array[index] = -1;
 }
 
-__global__ void GPU_find_path(char *maze, int *result, int height) {
-	int index = blockDim.x * blockIdx.x + threadIdx.x;
+__global__ void GPU_find_path(char *maze, int *result, int height, int offset) {
+	int index = blockDim.x * blockIdx.x + offset + threadIdx.x;
 
     // If x,y is the goal, return true.
     if ( maze[index] == 'G') {
@@ -180,10 +180,10 @@ __global__ void setupStart(char *maze, int *pathStart, int width){
 	maze[pathStart[0] * width + pathStart[1]] = 'S';
 }
 
-__global__ void GPU_clean_no_way(char *maze, int *result, bool *finish, int height){
-	int index = blockDim.x * blockIdx.x + threadIdx.x;
+__global__ void GPU_clean_no_way(char *maze, int *result, bool *finish, int height, int offset){
+	int index = blockDim.x * blockIdx.x + offset + threadIdx.x;
 	int x = blockIdx.x;
-	int y = threadIdx.x;
+	int y = offset + threadIdx.x;
 	int width = blockDim.x;
 	int count = 0;
 //	printf("index: %d, width: %d, x: %d, y: %d\n",index,width,x,y);
@@ -220,20 +220,35 @@ void GPU_recursive_maze_solver(int *mazeInt, int width, int height){
 	//three-state: 1 true, 0 false, -1 not yet done
 	int *dev_result;
 	cudaMalloc(&dev_result, sizeof(int) * width * height);
-	setupArray<<<width,height>>>(dev_result);
+	int max_rec = width / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		setupArray<<<height,MAX_THREAD>>>(dev_result, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	setupArray<<<height,width % MAX_THREAD>>>(dev_result, offset);
 
 	cudaMalloc(&dev_mazeChar, sizeof(char) * width * height);
 	cudaMalloc(&dev_mazeInt, sizeof(int) * width * height);
 	cudaMalloc(&dev_pathStart,sizeof(int) * 2);
 
 	cudaMemcpy(dev_mazeInt,mazeInt,sizeof(int) * width * height, cudaMemcpyHostToDevice);
-
-	GPU_FromCoordToChar<<<width,height>>>(dev_mazeInt, dev_mazeChar, dev_pathStart);
+	offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_FromCoordToChar<<<height,MAX_THREAD>>>(dev_mazeInt, dev_mazeChar, dev_pathStart, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	GPU_FromCoordToChar<<<height,width % MAX_THREAD>>>(dev_mazeInt, dev_mazeChar, dev_pathStart, offset);
 	cudaDeviceSynchronize();
 	setupStart<<<1,1>>>(dev_mazeChar, dev_pathStart, width);
 	cudaDeviceSynchronize();
 
-	GPU_find_path<<<width,height>>>(dev_mazeChar,dev_result, height);
+	offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_find_path<<<height,MAX_THREAD>>>(dev_mazeChar,dev_result, height, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	GPU_find_path<<<height,width % MAX_THREAD>>>(dev_mazeChar,dev_result, height, offset);
 	cudaDeviceSynchronize();
 
 	bool finish = false;
@@ -242,12 +257,22 @@ void GPU_recursive_maze_solver(int *mazeInt, int width, int height){
 	while(!finish){
 		finish = true;
 		cudaMemcpy(dev_finished,&finish,sizeof(bool),cudaMemcpyHostToDevice);
-		GPU_clean_no_way<<<width,height>>>(dev_mazeChar,dev_result, dev_finished, height);
+		offset = 0;
+		for(int i = 0; i < max_rec; i++){
+			GPU_clean_no_way<<<height,MAX_THREAD>>>(dev_mazeChar,dev_result, dev_finished, height, offset);
+			offset = (i+1) * MAX_THREAD;
+		}
+		GPU_clean_no_way<<<height,width % MAX_THREAD>>>(dev_mazeChar,dev_result, dev_finished, height, offset);
 		cudaDeviceSynchronize();
 
 		cudaMemcpy(&finish,dev_finished,sizeof(bool),cudaMemcpyDeviceToHost);
 	}
 
-	GPU_FromCharToCoord<<<width,height>>>(dev_mazeInt, dev_mazeChar, dev_pathStart);
+	offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_FromCharToCoord<<<height, MAX_THREAD>>>(dev_mazeInt, dev_mazeChar, dev_pathStart, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+	GPU_FromCharToCoord<<<height,width % MAX_THREAD>>>(dev_mazeInt, dev_mazeChar, dev_pathStart, offset);
 	cudaMemcpy(mazeInt,dev_mazeInt,sizeof(int) * width * height, cudaMemcpyDeviceToHost);
 }

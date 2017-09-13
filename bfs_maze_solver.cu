@@ -1,6 +1,7 @@
 #include <iostream>
 #include <queue>
 #include <vector>
+#include "Header/common.h"
 
 using namespace std;
 
@@ -150,8 +151,9 @@ void CPU_bfs_maze_solver(int *mat, int width, int height) {
     delete visited;
 }
 
-__global__ void GPU_FromCoordToNodeStruct(NodeStruct *matrix, int *mat, int width, int height, int i, int *path, int *index){
-	int j = blockIdx.x * width + threadIdx.x;
+__global__ void GPU_FromCoordToNodeStruct(NodeStruct *matrix, int *mat, int width, int height, int *path, int *index, int offset){
+	int i = blockIdx.x;
+	int j = offset + threadIdx.x;
 	if (mat[i*width + j] == 1) {
 		// is not a wall
 		matrix[i * width + j] = {i, j, NULL, true};
@@ -168,8 +170,8 @@ __global__ void GPU_FromCoordToNodeStruct(NodeStruct *matrix, int *mat, int widt
 	}
 }
 
-__global__ void setupVisited(bool *visited, int width, int height){
-	int k = blockIdx.x * width + threadIdx.x;
+__global__ void setupVisited(bool *visited, int width, int height, int offset){
+	int k = blockIdx.x * width + offset + threadIdx.x;
 	visited[k] = false;
 }
 
@@ -178,9 +180,9 @@ __global__ void SetWallNode(NodeStruct *matrix, int width, int dimension, bool v
 	if(i < dimension) matrix[i].isNotWall = value;
 }
 
-__global__ void GPU_PrintNodeMaze(NodeStruct *array, int *mat, int *startPath, int *endPath, int width, int height){
+__global__ void GPU_PrintNodeMaze(NodeStruct *array, int *mat, int *startPath, int *endPath, int width, int height, int offset){
     int i = blockIdx.x;
-    int j = threadIdx.x;
+    int j = offset + threadIdx.x;
 	if ((array[i*width + j].x == startPath[0] && array[i*width + j].y == startPath[1]) || (array[i*width + j].x == endPath[0] && array[i*width + j].y == endPath[1])) {
 //                cout << 2 << " ";
 		mat[i*width + j] = 2;
@@ -228,9 +230,13 @@ void GPU_bfs_maze_solver(int *mat, int width, int height){
 	//copy data on GPU
 	cudaMemcpy(dev_mat, mat, sizeof(int) * width * height, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_index,&index, sizeof(int), cudaMemcpyHostToDevice);
-	for(int i = 0; i < width; i++){
-		GPU_FromCoordToNodeStruct<<<1, height>>>(dev_matrix, dev_mat, width, height, i, dev_path, dev_index);
+	int max_rec = width / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_FromCoordToNodeStruct<<<height, width>>>(dev_matrix, dev_mat, width, height, dev_path, dev_index, offset);
+		offset = (i+1) * MAX_THREAD;
 	}
+	GPU_FromCoordToNodeStruct<<<height, width % MAX_THREAD>>>(dev_matrix, dev_mat, width, height, dev_path, dev_index, offset);
 	cudaDeviceSynchronize();
 	//get back all the data
 	cudaMemcpy(matrix, dev_matrix, sizeof(NodeStruct) * width * height, cudaMemcpyDeviceToHost);
@@ -244,7 +250,12 @@ void GPU_bfs_maze_solver(int *mat, int width, int height){
 	bool *dev_visited;
 	cudaMalloc(&dev_visited, sizeof(bool) * width * height);
 	// initially all cells are unvisited
-   setupVisited<<<width, height>>>(dev_visited, width, height);
+	offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		setupVisited<<<width, MAX_THREAD>>>(dev_visited, width, height, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+   setupVisited<<<width, height % MAX_THREAD>>>(dev_visited, width, height, offset);
    cudaDeviceSynchronize();
    cudaMemcpy(visited, dev_visited, sizeof(bool) * width * height, cudaMemcpyDeviceToHost);
 	// create an empty queue
@@ -275,8 +286,12 @@ void GPU_bfs_maze_solver(int *mat, int width, int height){
 			cudaMemcpy(dev_start,startPath,sizeof(int)*2,cudaMemcpyHostToDevice);
 			cudaMemcpy(dev_end,endPath,sizeof(int)*2,cudaMemcpyHostToDevice);
 			cudaMemcpy(dev_matrix,matrix,sizeof(NodeStruct)*width*height, cudaMemcpyHostToDevice);
-
-			GPU_PrintNodeMaze<<<height,width>>>(dev_matrix, dev_mat, dev_start, dev_end, width, height);
+			offset = 0;
+			for(int i = 0; i < max_rec; i++){
+				GPU_PrintNodeMaze<<<height,MAX_THREAD>>>(dev_matrix, dev_mat, dev_start, dev_end, width, height, offset);
+				offset = (i+1) * MAX_THREAD;
+			}
+			GPU_PrintNodeMaze<<<height,width % MAX_THREAD>>>(dev_matrix, dev_mat, dev_start, dev_end, width, height, offset);
 			cudaMemcpy(mat,dev_mat,sizeof(int)*width*height,cudaMemcpyDeviceToHost);
 			break;
 		}

@@ -220,8 +220,9 @@ __device__ void GPU_Idx2Pos(int idx, int width, pair<int, int> *point) {
   point->second = column;
 }
 
-__global__ void CreateFirstEdges(pair<int, int> *edges, int row, int height, int width) {
-	int column = threadIdx.x;
+__global__ void CreateFirstEdges(pair<int, int> *edges, int height, int width, int offset) {
+	int column = offset + threadIdx.x;
+	int row = blockIdx.x;
 	if (column == 0) {
 		return;
 	}
@@ -232,8 +233,8 @@ __global__ void CreateFirstEdges(pair<int, int> *edges, int row, int height, int
 	edges[(row-1) * height * 2 + (column-1) * 2 + 1].second = GPU_Pos2Idx(row - 1, column, width);
 }
 
-__global__ void CreateSecondEdges(pair<int, int> *edges, int height, int width) {
-	int column = threadIdx.x;
+__global__ void CreateSecondEdges(pair<int, int> *edges, int height, int width, int offset) {
+	int column = offset + threadIdx.x;
 	if (column == 0) {
 		return;
 	}
@@ -242,8 +243,8 @@ __global__ void CreateSecondEdges(pair<int, int> *edges, int height, int width) 
 	edges[column + (width-1) * (height-1)].second = GPU_Pos2Idx(0, column - 1, width);
 }
 
-__global__ void CreateThirdEdges(pair<int, int> *edges, int height, int width) {
-	int row = threadIdx.x;
+__global__ void CreateThirdEdges(pair<int, int> *edges, int height, int width, int offset) {
+	int row = offset + threadIdx.x;
 	if (row == 0) {
 		return;
 	}
@@ -263,8 +264,8 @@ void GPU_ShuffleMatrix (pair<int,int> *edges, int width, int height) {
 }
 
 // Convert each edge to the postion in the matrix that must be drawn.
-__global__ void GPU_ConvertToPaintedPoint(pair<int, int> *edges, pair<int, int> *painted_points, int width, int dim, pair<int, int> *node_a,  pair<int, int> *node_b,  pair<int, int> *edge) {
-	int index = threadIdx.x;
+__global__ void GPU_ConvertToPaintedPoint(pair<int, int> *edges, pair<int, int> *painted_points, int width, int dim, pair<int, int> *node_a,  pair<int, int> *node_b,  pair<int, int> *edge, int offset) {
+	int index = offset + threadIdx.x;
 	if (index >= dim) {
 		return;
 	}
@@ -349,15 +350,28 @@ int *GPU_GenerateMaze(pair<int, int> *painted_points, int *largeMaze, int width,
 
 // pair < node A, node B >
 void GPU_CreateEdges(pair<int, int> *dev_edges, int width, int height) {
-	for (int row = 1; row < height; ++row) {
-//		cout << "width: " << width << endl;
-		CreateFirstEdges<<<1, width>>>(dev_edges, row, height, width);
+	int max_rec = width / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		CreateFirstEdges<<<height, MAX_THREAD>>>(dev_edges, height, width, offset);
+		offset = (i + 1) * MAX_THREAD;
 	}
 
-	CreateSecondEdges<<<1, width>>>(dev_edges, height, width);
+	offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		CreateSecondEdges<<<1, MAX_THREAD>>>(dev_edges, height, width, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	CreateSecondEdges<<<1, width % MAX_THREAD>>>(dev_edges, height, width, offset);
+	cudaDeviceSynchronize();
 
-	CreateThirdEdges<<<1, height>>>(dev_edges, height, width);
-
+	offset = 0;
+	max_rec = height / MAX_THREAD;
+	for(int i = 0; i < max_rec; i++){
+		CreateThirdEdges<<<1, MAX_THREAD>>>(dev_edges, height, width, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	CreateThirdEdges<<<1, height % MAX_THREAD>>>(dev_edges, height, width, offset);
 	cudaDeviceSynchronize();
 }
 
@@ -414,9 +428,14 @@ void GPU_kruskal_maze_generator(int *maze, int width, int height) {
 	cudaMalloc(&node_a, sizeof(pair<int, int>) * count);
 	cudaMalloc(&node_b, sizeof(pair<int, int>) * count);
 	cudaMalloc(&edge, sizeof(pair<int, int>) * count);
-
-	GPU_ConvertToPaintedPoint<<<1, count>>>(dev_mst, dev_points, newWidth, count, node_a, node_b, edge);
-
+	int max_rec = count / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_ConvertToPaintedPoint<<<1, MAX_THREAD>>>(dev_mst, dev_points, newWidth, count, node_a, node_b, edge, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	GPU_ConvertToPaintedPoint<<<1, count % MAX_THREAD>>>(dev_mst, dev_points, newWidth, count, node_a, node_b, edge, offset);
+	cudaDeviceSynchronize();
 	// copy device edge matrix in host matrix
 	cudaMemcpy(points, dev_points, sizeof(pair<int, int>) * count, cudaMemcpyDeviceToHost);
 

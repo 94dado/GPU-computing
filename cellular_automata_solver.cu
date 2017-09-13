@@ -65,8 +65,8 @@ __device__ int DEVICE_check_neighbour_open(int *maze, int length, int row_length
 		}
 }
 
-__global__ void GPU_check_neighbour_open(int *maze, int length, int row_length, bool *again){
-	int i = blockIdx.x * row_length + threadIdx.x;
+__global__ void GPU_check_neighbour_open(int *maze, int length, int row_length, bool *again, int offset){
+	int i = blockIdx.x * row_length + offset + threadIdx.x;
 	//controllo le celle vicine
 	int count = 0;
 	//su
@@ -97,11 +97,18 @@ void GPU_cellular_automata_solver(int *maze, int width, int height){
 	cudaMalloc(&dev_again, sizeof(bool));
 
 	cudaMemcpy(dev_maze,maze,sizeof(int)*length,cudaMemcpyHostToDevice);
+	int max_rec = width / MAX_THREAD;
+	int offset;
 	while(again){
 		//cambio valore booleano per fermarmi se servira'
 		again = false;
 		cudaMemcpy(dev_again, &again, sizeof(bool), cudaMemcpyHostToDevice);
-		GPU_check_neighbour_open<<<length/row_length, row_length>>>(dev_maze, length, row_length, dev_again);
+		offset = 0;
+		for(int i = 0; i < max_rec; i++){
+			GPU_check_neighbour_open<<<height, MAX_THREAD>>>(dev_maze, length, row_length, dev_again, offset);
+			offset = (i + 1) * MAX_THREAD;
+		}
+		GPU_check_neighbour_open<<<height, width % MAX_THREAD>>>(dev_maze, length, row_length, dev_again, offset);
 		//attendo
 		cudaDeviceSynchronize();
 		//copio su host

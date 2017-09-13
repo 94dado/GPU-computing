@@ -80,7 +80,7 @@ void bfs(int side, int *maze1, int *maze2) {
 	start = seconds();
 	GPU_bfs_maze_solver(maze2,side,side);
 	diff = seconds()-start;
-	PrintMaze(maze2,side,side);
+//	PrintMaze(maze2,side,side);
 	cout << endl << "The time of computation is " << diff << " seconds" << endl;
 	cudaDeviceReset();
 }
@@ -154,7 +154,7 @@ void wall_follower(int side, int startP, int endP, int *maze1, int *maze2) {
 }
 
 int main(){
-	int side = 5000;
+	int side = 100;
 	// setted size of the matrix
 	int dim = side * side;
 	cout << endl << "DIMENSIONE TEST " << dim << endl;

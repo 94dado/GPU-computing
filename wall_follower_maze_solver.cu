@@ -166,8 +166,8 @@ __global__ void GPU_array_contains(int *maze, int move, int size,
 	}
 }
 
-__global__ void GPU_fill_solution(int *maze, int *solution, int solution_size) {
-	int index = threadIdx.x;
+__global__ void GPU_fill_solution(int *maze, int *solution, int solution_size, int offset) {
+	int index = offset + threadIdx.x;
 	if (index < solution_size) {
 		maze[solution[index]] = OPEN;
 	}
@@ -176,14 +176,26 @@ __global__ void GPU_fill_solution(int *maze, int *solution, int solution_size) {
 void GPU_update_maze_with_solution(int *maze, int *dev_maze, int width, int height, int start, int end, int *solution, int solution_size) {
 	//set all to 0
 	int *dev_solution;
-	GPU_FillWall<<<height, width>>>(dev_maze, width, width*height);
+	int max_rec = width / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_FillWall<<<height, MAX_THREAD>>>(dev_maze, width, width*height, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+	GPU_FillWall<<<height, width % MAX_THREAD>>>(dev_maze, width, width*height, offset);
 	cudaDeviceSynchronize();
 	cudaMemcpy(maze, dev_maze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
 //	PrintMaze(maze, width, height);
 	//set to OPEN only the correct path
 	cudaMalloc(&dev_solution, sizeof(int) * solution_size);
 	cudaMemcpy(dev_solution, solution, sizeof(int) * solution_size, cudaMemcpyHostToDevice);
-	GPU_fill_solution<<<1, solution_size>>>(dev_maze, dev_solution, solution_size);
+	offset = 0;
+	max_rec = solution_size / MAX_THREAD;
+	for(int i = 0; i < max_rec; i++){
+		GPU_fill_solution<<<1, MAX_THREAD>>>(dev_maze, dev_solution, solution_size, offset);
+		offset = (i+1) * MAX_THREAD;
+	}
+	GPU_fill_solution<<<1, solution_size % MAX_THREAD>>>(dev_maze, dev_solution, solution_size, offset);
 	cudaDeviceSynchronize();
 	cudaMemcpy(maze, dev_maze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
 	//set to OBJECTIVE the start and end

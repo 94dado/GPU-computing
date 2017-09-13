@@ -235,9 +235,9 @@ void PrintPath();
 
 
 // Initialize the maze vector with a completely-filled grid with the size the user specified
-__global__ void GPU_initializeMaze(bool *maze, int width, int height){
-	int b = threadIdx.x;	//width
-	int a = blockIdx.x;		//height
+__global__ void GPU_initializeMaze(bool *maze, int width, int height, int offset){
+	int b = offset + threadIdx.x;	//width
+	int a = blockIdx.x;				//height
 	bool is_border;
 
 	if(a == 0 || a == height - 1 ||
@@ -387,9 +387,9 @@ void GPU_generateMaze(int *maze_size, bool *maze){
     }
 }
 
-__global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int height){
+__global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int height, int offset){
 	int a = blockIdx.x;			//height
-	int b = threadIdx.x;		//width
+	int b = offset + threadIdx.x;		//width
 	if ((a == 0 && maze[a * width * 2 + (2*b)] == 0) || (a == height-1 && maze[a * width * 2 + (2*b)] == 0) || (b == 0 && maze[a * width * 2 + (2*b)] == 0) || (b == width -1 && maze[a * width * 2 + (2*b)] == 0)) {
 //		printf("a:%d, b:%d\n",a,b);
 		coordMaze[a*width + b] = OBJECTIVE;
@@ -402,11 +402,6 @@ __global__ void GPU_putCoord(bool *maze, int *coordMaze, int width, int height){
 			coordMaze[a*width + b] = OPEN;
 		}
 	}
-}
-
-void GPU_DFSToCoord(bool *dev_maze, int *size_maze, int *coordMaze){
-    GPU_putCoord<<<size_maze[1],size_maze[0]>>>(dev_maze, coordMaze, size_maze[0], size_maze[1]);
-    cudaDeviceSynchronize();
 }
 
 // The width and height must be greater than or equal to 4 or it won't work
@@ -422,7 +417,13 @@ void GPU_dfs_maze_generator(int *coordMaze, int width, int height){
 
 	cudaMalloc(&dev_maze, sizeof(bool) * 2 * width * height);
 	cudaMalloc(&dev_coordMaze, sizeof(int) * width * height);
-	GPU_initializeMaze<<<height,width>>>(dev_maze, width, height);
+	int max_rec = width / MAX_THREAD;
+	int offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_initializeMaze<<<height,MAX_THREAD>>>(dev_maze, width, height, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	GPU_initializeMaze<<<height,width % MAX_THREAD>>>(dev_maze, width, height, offset);
 	cudaDeviceSynchronize();
 	//copy data on cpu
 	cudaMemcpy(maze,dev_maze, sizeof(bool) * 2 * width * height, cudaMemcpyDeviceToHost);
@@ -432,7 +433,12 @@ void GPU_dfs_maze_generator(int *coordMaze, int width, int height){
 
 	GPU_generateMaze(mazeSize, maze);
 	cudaMemcpy(dev_maze, maze, sizeof(bool) * 2 * width * height, cudaMemcpyHostToDevice);
-	GPU_DFSToCoord(dev_maze, mazeSize, dev_coordMaze);
+	offset = 0;
+	for(int i = 0; i < max_rec; i++){
+		GPU_putCoord<<<height,MAX_THREAD>>>(dev_maze, dev_coordMaze, width, height, offset);
+		offset = (i + 1) * MAX_THREAD;
+	}
+	GPU_putCoord<<<height,width % MAX_THREAD>>>(dev_maze, dev_coordMaze, width, height, offset);
 	cudaMemcpy(coordMaze, dev_coordMaze, sizeof(int) * width * height, cudaMemcpyDeviceToHost);
 
 	delete maze;
