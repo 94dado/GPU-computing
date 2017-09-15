@@ -252,10 +252,10 @@ void GPU_bfs_maze_solver(int *mat, int width, int height){
 	// initially all cells are unvisited
 	offset = 0;
 	for(int i = 0; i < max_rec; i++){
-		setupVisited<<<width, MAX_THREAD>>>(dev_visited, width, height, offset);
+		setupVisited<<<height, MAX_THREAD>>>(dev_visited, width, height, offset);
 		offset = (i+1) * MAX_THREAD;
 	}
-   setupVisited<<<width, height % MAX_THREAD>>>(dev_visited, width, height, offset);
+   setupVisited<<<height, width % MAX_THREAD>>>(dev_visited, width, height, offset);
    cudaDeviceSynchronize();
    cudaMemcpy(visited, dev_visited, sizeof(bool) * width * height, cudaMemcpyDeviceToHost);
 	// create an empty queue

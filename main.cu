@@ -154,32 +154,32 @@ void wall_follower(int side, int startP, int endP, int *maze1, int *maze2) {
 }
 
 int main(){
-	int side = 100;
+	int side = 2000;
 	// setted size of the matrix
 	int dim = side * side;
 	cout << endl << "DIMENSIONE TEST " << dim << endl;
 	int *maze1 = new int[dim];
 	int *maze2 = new int[dim];
 
-//	//DFS
-//	dfs(side, maze1, maze2);
-//	// Cellular automata
-//	cellular(side-1, maze1,maze2);
-//
-//	// Backtracker
-//	backtracker(side, maze1, maze2);
-//	// Wall follower
-//	wall_follower(side, 1, dim-2, maze1,maze2);
+	//DFS
+	dfs(side, maze1, maze2);
+	// Cellular automata
+	cellular(side-1, maze1,maze2);
+
+	// Backtracker
+	backtracker(side, maze1, maze2);
+	// Wall follower
+	wall_follower(side, 1, dim-2, maze1,maze2);
 
 	// Division
 	division(side, maze1, maze2);
 	// BFS
 	bfs(side, maze1,maze2);
 
-//	// Kruskal
-//	kruskal(side-1, maze1, maze2);
-//	// Recursive
-//	recursive(side-1, maze1,maze2);
+	// Kruskal
+	kruskal(side-1, maze1, maze2);
+	// Recursive
+	recursive(side-1, maze1,maze2);
 
 	delete maze1;
 	delete maze2;
