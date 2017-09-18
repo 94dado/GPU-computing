@@ -24,22 +24,22 @@ void CPU_cellular_automata_solver(int *maze, int width, int height){
 	bool again = true;
 	int i;
 	while(again){
-		//risetto il booleano
+		//setup the boolen value
 		again = false;
 		//per ogni cella
 		for(i=0; i < length; i++){
 			if(maze[i] != WALL){
-				//controllo le celle vicine
+				//check neighbour cells
 				int count = 0;
-				//su
+				//up
 				count += check_neighbour_open(maze, length, row_length, i, i - row_length);
-				//giu
+				//down
 				count += check_neighbour_open(maze, length, row_length, i, i + row_length);
-				//dx
+				//right
 				count += check_neighbour_open(maze, length, row_length, i, i + 1);
-				//sx
+				//left
 				count += check_neighbour_open(maze, length, row_length, i, i - 1);
-				//se ho solo 1 vicino open
+				//only if there is one 1 near me
 				if(count == 1 && maze[i] == OPEN){
 					maze[i] = WALL;
 					again = true;
@@ -67,17 +67,15 @@ __device__ int DEVICE_check_neighbour_open(int *maze, int length, int row_length
 
 __global__ void GPU_check_neighbour_open(int *maze, int length, int row_length, bool *again, int offset){
 	int i = blockIdx.x * row_length + offset + threadIdx.x;
-	//controllo le celle vicine
 	int count = 0;
-	//su
+	//up
 	count += DEVICE_check_neighbour_open(maze, length, row_length, i,  i - row_length);
-	//giu
+	//down
 	count += DEVICE_check_neighbour_open(maze, length, row_length, i, i + row_length);
-	//dx
+	//right
 	count += DEVICE_check_neighbour_open(maze, length, row_length, i, i + 1);
-	//sx
+	//left
 	count += DEVICE_check_neighbour_open(maze, length, row_length, i, i - 1);
-	//attendo che tutti abbiano fatto
 	__syncthreads();
 	if(count == 1 && maze[i] == OPEN){
 		maze[i] = WALL;
@@ -92,7 +90,7 @@ void GPU_cellular_automata_solver(int *maze, int width, int height){
 	bool again = true;
 	int *dev_maze;
 	bool *dev_again;
-	//copio su device
+
 	cudaMalloc(&dev_maze, sizeof(int) * length);
 	cudaMalloc(&dev_again, sizeof(bool));
 
@@ -100,7 +98,7 @@ void GPU_cellular_automata_solver(int *maze, int width, int height){
 	int max_rec = width / MAX_THREAD;
 	int offset;
 	while(again){
-		//cambio valore booleano per fermarmi se servira'
+		//setup bool value
 		again = false;
 		cudaMemcpy(dev_again, &again, sizeof(bool), cudaMemcpyHostToDevice);
 		offset = 0;
@@ -109,12 +107,10 @@ void GPU_cellular_automata_solver(int *maze, int width, int height){
 			offset = (i + 1) * MAX_THREAD;
 		}
 		GPU_check_neighbour_open<<<height, width % MAX_THREAD>>>(dev_maze, length, row_length, dev_again, offset);
-		//attendo
 		cudaDeviceSynchronize();
-		//copio su host
+		//copy data on host
 		cudaMemcpy(&again, dev_again, sizeof(bool), cudaMemcpyDeviceToHost);
 	}
-	//terminata esecuzione su gpu. copio risultato
+	//finish
 	cudaMemcpy(maze, dev_maze, sizeof(int) * length, cudaMemcpyDeviceToHost);
-	//dovrebbe aver finito
 }

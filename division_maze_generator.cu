@@ -93,14 +93,6 @@ void add_objective(int *maze, int width, int height){
 			stack_end.push_back(width*(height-1)+j);
 		}
 	}
-//	for(int i = 1; i < height; i++){
-//		if(maze[i*width + 1] == OPEN){
-//			stack_start.push_back(i*width);
-//		}
-//		if(maze[i*width + width - 2] == OPEN){
-//			stack_end.push_back(i*width + width -1);
-//		}
-//	}
 	int start = rand() % stack_start.size();
 	start = stack_start[start];
 	maze[start] = OBJECTIVE;
@@ -142,8 +134,8 @@ void recursive_divide(int *maze, int x, int y, int width, int height, int real_w
 //	cout << "fromX: " << fromX << ", fromY: " << fromY << ", holeX: " << holeX
 //			<< ", holeY: " << holeY << ", directionX: " << directionX << ", wall_length:"
 //			<< wall_lenght << ", perpendicular: " << perpendicular << endl;
-	//create the wall with an hole
 
+	//create the wall with an hole
 	for(int i = 0; i < lenght; i++){
 		if(wX != pX || wY != pY){
 			 maze[real_width * wY + wX] = maze[real_width * wY + wX] | dir;
