@@ -34,8 +34,8 @@ Download or clone the repository and launch the *main.cu* file inside the main f
 
 ## Authors
 
-**Daniele Piergigli** - *A bored student of computer science* - [Lucci93](https://github.com/Lucci93)
-**Davide Quadrelli** - *Genius. Billionaire. Playboy. Philanthropist* - [94dado](https://github.com/94dado)
+* **Daniele Piergigli** - *A bored student of computer science* - [Lucci93](https://github.com/Lucci93)
+* **Davide Quadrelli** - *Genius. Billionaire. Playboy. Philanthropist* - [94dado](https://github.com/94dado)
 
 ## License
 
